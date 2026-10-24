@@ -56,9 +56,10 @@ Har so'z tugaganda (bo'shliq, Enter, Tab) tekshiriladi:
   va uni foydalanuvchi lug'atiga yozadi. Keyingi safar bu so'z o'girilmaydi.
 - **Parol va email maydonida** o'girish doim o'chiq bo'ladi, terminalda esa sozlamaga ko'ra.
 
-Dastur atrofdagi matnni bersa (GNOME'dagi ko'pchilik dasturlar), harf darhol yoziladi va
-o'girish joyida bo'ladi. Qolgan dasturlarda qaror kutayotgan harf (masalan «s» dan keyin
-«h» kelishi mumkin) tagiga chizilib turadi.
+Dastur atrofdagi matnni bersa (GNOME'dagi ko'pchilik dasturlar, Windows'da TSF'ni to'liq
+qo'llaydigan dasturlar), harf darhol yoziladi va o'girish joyida bo'ladi. Qolgan dasturlarda
+(Windows'dagi Notepad kabi) joriy so'z tagiga chizilib turadi va bo'shliq bosilganda istisno
+hamda lug'at bilan yoziladi.
 
 ### Aniqlik
 
@@ -69,9 +70,10 @@ natija 99,78 % mos keldi. Farq qilgan 971 holatning hammasi qo'lda ko'rib chiqil
 
 ### Sozlamalar
 
-«Özbek klaviaturasi» ilovasida har funksiya alohida yoqiladi va o'chiriladi. Ilova Super+K
-bilan yoki yuqori paneldagi til menyusidan ochiladi. Panel menyusining o'zida ham o'sha
-rejimning asosiy toggle'lari turadi. Ilovada shaxsiy lug'at va matnni sinab ko'rish maydoni bor.
+«Özbek klaviaturasi» ilovasida har funksiya alohida yoqiladi va o'chiriladi. Ilovada shaxsiy
+lug'at va matnni sinab ko'rish maydoni bor. Rejimning asosiy toggle'lari panelning o'zida ham
+turadi: Linux'da yuqori paneldagi til menyusida (ilova Super+K bilan ham ochiladi), Windows'da
+vazifalar panelidagi «Ö» tugmasida.
 
 ## Linux
 
@@ -129,10 +131,11 @@ python3 linux/ibus/ogirgich.py < eski.txt > yangi.txt
 
 ## Windows
 
-Windows 10 va 11 uchun. **Haqiqiy Windows'da hali sinalmagan.** O'girish yadrosi Linux'dagi
-bilan bir xil ishlashi sinovlar bilan tekshirilgan (100 umumiy holat va 165 824 qatorli korpus
-bayt-bayt mos). O'rnatuvchi va olib tashlovchi Wine'da sinalgan. Wine'da matn xizmatini
-ro'yxatga olish ishlamaydi, shuning uchun yozishning o'zi Windows'da sinaladi.
+Windows 10 va 11 uchun. Windows 11 (24H2) da sinalgan: avtomatik sinov 64 va 32-bitli dasturda
+55/55 o'tadi. Unda oddiy maydon (IMM32) va TSF'li maydon, uchala rejim, toggle'lar, panel menyusi,
+fokus almashuvi va Backspace tekshiriladi. Qo'lda Notepad, uning Replace oynasi, Start qidiruvi,
+panel menyusi, sozlamalar oynasi, o'rnatish va olib tashlash sinalgan. O'girish yadrosi Linux'dagi
+bilan bayt-bayt bir xil (208 614 qatorli korpus).
 
 ### O'rnatish
 
@@ -142,7 +145,9 @@ rejimlarini o'zbek (lotin) tiliga qo'shadi. Til ro'yxatda bo'lmasa, Windows uni 
 Start menyusida «Özbek klaviaturasi» sozlamalar oynasi paydo bo'ladi.
 
 Rejim Win+Probel bilan almashtiriladi. Windows'da W, C, [, ] tugmalari alohida klaviatura sxemasida
-emas, matn xizmatining o'zida turadi. Asl belgilar o'ng Alt (AltGr) bilan yoziladi.
+emas, matn xizmatining o'zida turadi. Asl belgilar o'ng Alt bilan yoziladi. Vazifalar panelida til
+belgisi (ÖZ, O'Z, ЎЗ) yonida «Ö» tugmasi turadi: bosilganda rejimning toggle'lari va «Sozlamalar…»
+chiqadi.
 
 Sozlamalar `HKCU\Software\YangiKlaviatura` da, shaxsiy lug'at esa `%APPDATA%\YangiKlaviatura\lugat.txt`
 da saqlanadi. Dastur olib tashlanganda ular o'chirilmaydi.
@@ -161,6 +166,27 @@ bash windows/qur.sh   # sinovlar → ozbek64.dll, ozbek32.dll → Sozlamalar.exe
 
 Natija `windows/build/` papkasida chiqadi. DLL'lar faqat Windows'ning o'z kutubxonalariga bog'lanadi.
 
+### Haqiqiy Windows'da sinash
+
+`windows/vm/` — QEMU/KVM ichidagi Windows 11. Microsoft'ning bepul 90 kunlik Enterprise LTSC
+baholash nusxasi ishlatiladi. O'rnatish avtomatik bo'ladi, VM'da tarmoq yo'q. Ichidagi agent CD'dagi
+`buyruq.ps1` ni bajaradi va chiqishini COM1 orqali qaytaradi.
+
+```bash
+sudo apt install qemu-system-x86 qemu-utils xorriso imagemagick
+python3 windows/vm/vm.py ornat <windows-iso>    # ~25 daqiqa
+mkdir -p /var/tmp/sinov && cp windows/build/{ozbek-klaviaturasi-*.exe,tsf_sinov64.exe,tsf_sinov32.exe} /var/tmp/sinov/
+cp windows/vm/sinov.ps1 /var/tmp/sinov/buyruq.ps1
+python3 windows/vm/vm.py yugur /var/tmp/sinov   # ✓/✗ qatorlari, oxirida «NATIJA o'tdi/jami»
+```
+
+`tsf_sinov` tugmalarni odam yozgandek SendInput bilan bosadi. Natija oddiy maydonda (EDIT, IMM32 orqali)
+va TSF'ni to'liq qo'llaydigan RichEdit'da tekshiriladi, panel tugmasining menyusi ham sinaladi.
+`vm.py surat`, `sichqon`, `tugma` va `yoz` buyruqlari ekranni qo'lda ko'rish uchun.
+
+Xizmatning har tugma qarori jurnalga yozilishi mumkin: `HKCU\Software\YangiKlaviatura` da `jurnal=1`
+(DWORD) qo'yiladi, yozuvlar `%LOCALAPPDATA%\YangiKlaviatura\jurnal.txt` ga tushadi.
+
 ## macOS
 
 Tayyorlanmoqda.
@@ -175,5 +201,6 @@ node qur.mjs                                      # linux/ dagi sxema va xarita 
 node qur.mjs --check                              # fayllar xaritaga mosligi
 python3 -m unittest linux/ibus/test_ogirgich.py   # o'girish qoidalari
 python3 linux/ibus/sinov_ibus.py                  # o'rnatilgan dvigatel, alohida IBus nusxasida
+python3 linux/ibus/sinov_ibus.py --manba          # repo'dagi dvigatel (o'rnatilganiga tegmaydi)
 bash linux/deb.sh                                 # dist/yangi-klaviatura_<versiya>_all.deb
 ```

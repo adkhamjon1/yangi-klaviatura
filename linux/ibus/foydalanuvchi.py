@@ -10,6 +10,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -135,8 +136,13 @@ def ibus_qayta():
     subprocess.run(['ibus', 'write-cache'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     subprocess.run(['ibus', 'restart'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     x11 = '/usr/libexec/ibus-x11'
-    if os.environ.get('DISPLAY') and os.path.exists(x11) \
-            and subprocess.run(['pgrep', '-x', 'ibus-x11'], stdout=subprocess.DEVNULL).returncode:
+    if not (os.environ.get('DISPLAY') and os.path.exists(x11)):
+        return
+    # restart asinxron: daemon tayyor bo'lmasa ibus-x11 ochilib darhol yopiladi — bir necha bor uriniladi
+    for _ in range(5):
+        time.sleep(1)
+        if not subprocess.run(['pgrep', '-x', 'ibus-x11'], stdout=subprocess.DEVNULL).returncode:
+            return
         subprocess.Popen([x11], start_new_session=True, stdin=subprocess.DEVNULL,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
