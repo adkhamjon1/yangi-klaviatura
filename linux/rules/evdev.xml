@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE xkbConfigRegistry SYSTEM "xkb.dtd">
+<!-- ozbek-klaviatura: qur.mjs yasagan -->
+<xkbConfigRegistry version="1.1">
+  <layoutList>
+    <layout>
+      <configItem>
+        <name>ozbek</name>
+        <shortDescription>ÖZ</shortDescription>
+        <description>Özbek (yangi yozuv)</description>
+        <countryList>
+          <iso3166Id>UZ</iso3166Id>
+        </countryList>
+        <languageList>
+          <iso639Id>uzb</iso639Id>
+        </languageList>
+      </configItem>
+    </layout>
+  </layoutList>
+</xkbConfigRegistry>
