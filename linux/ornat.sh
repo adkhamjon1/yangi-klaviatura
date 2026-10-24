@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 TIZIM=/usr/local/share/yangi-klaviatura
 ILOVA=io.github.adkhamjon1.YangiKlaviatura
 KOMPONENT=/usr/share/ibus/component/ozbek.xml
-FAYLLAR=(ogirgich.py sozlama.py xarita.py lugat.txt engine.py sozlamalar.py)
+FAYLLAR=(ogirgich.py sozlama.py xarita.py lugat.txt foydalanuvchi.py engine.py sozlamalar.py)
 
 if [ "${1:-}" = --tizim ]; then              # root sifatida: dvigatel, oyna, ikonka
   install -d "$TIZIM"
@@ -34,7 +34,7 @@ fi
 echo "✓ sxema: $XKB/symbols/ozbek"
 
 if [ "${1:-}" = --faqat-sxema ]; then
-  python3 manbalar.py +xkb:ozbek
+  python3 ibus/foydalanuvchi.py sxema
   echo "GNOME yangi sxemani tizimga qayta kirgandan keyin ko'radi."
   exit 0
 fi
@@ -55,13 +55,6 @@ if [ -n "${DISPLAY:-}" ] && [ -x /usr/libexec/ibus-x11 ] && ! pgrep -x ibus-x11 
   setsid /usr/libexec/ibus-x11 >/dev/null 2>&1 < /dev/null &
 fi
 
-# 3. GNOME til ro'yxati: oddiy sxema o'rniga IBus rejimlari
-read -r eski kirill < <(python3 -c 'import sys; sys.path.insert(0, "ibus"); import sozlama; s = sozlama.oqi(); print(int(s["eski"]), int(s["kirill_rejim"]))')
-qosh=(-xkb:ozbek +ibus:ozbek-lotin)
-[ "$eski" = 1 ] && qosh+=(+ibus:ozbek-eski)
-[ "$kirill" = 1 ] && qosh+=(+ibus:ozbek-kirill)
-python3 manbalar.py "${qosh[@]}"
-
-# 4. Sozlamalar oynasi uchun tezkor tugma (band bo'lsa qo'yilmaydi)
-python3 tezkor.py qosh '<Super>k'
+# 3. GNOME til ro'yxati (oddiy sxema o'rniga IBus rejimlari) va Super+K — o'rnatilgan nusxadan
+python3 "$TIZIM/foydalanuvchi.py" yoq
 echo "Almashtirish: Super+Probel. Sozlamalar: Super+K yoki paneldagi til menyusi."

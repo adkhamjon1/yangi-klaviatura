@@ -7,6 +7,7 @@
 import os
 import subprocess
 import sys
+import threading
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -17,17 +18,17 @@ gi.require_version('Adw', '1')
 gi.require_version('Graphene', '1.0')
 from gi.repository import Adw, Gdk, Gio, GLib, Graphene, Gtk  # noqa: E402
 
+import foydalanuvchi  # noqa: E402
 import sozlama  # noqa: E402
-from ogirgich import ogir  # noqa: E402
+from ogirgich import LUGAT_FAYL, Lugat, lugat_oqi, ogir  # noqa: E402
 from xarita import TUGMA_ASLI  # noqa: E402
 
 ILOVA_ID = 'io.github.adkhamjon1.YangiKlaviatura'
-VERSIYA = '0.1'
-MANBALAR = 'org.gnome.desktop.input-sources'
-REJIM_MANBA = {'eski': ('ibus', 'ozbek-eski'), 'kirill_rejim': ('ibus', 'ozbek-kirill')}
-TARTIB = ['ozbek-lotin', 'ozbek-eski', 'ozbek-kirill']
+VERSIYA = '1.0.0'
+REJIM_MANBA = {'eski': foydalanuvchi.ESKI, 'kirill_rejim': foydalanuvchi.KIRILL}
 IBUS_KOMPONENT = '/usr/share/ibus/component/ozbek.xml'
-NAMUNA = "O'zbekiston — cho'l va tog'lar yurti. Тошкент — қадимий шаҳар."
+NAMUNA = "O'zbekiston — cho'l va tog'lar yurti. Тошкент — қадимий шаҳар. Chrome: www.shifo.uz"
+ORNATILGAN_LUGAT = len(Lugat(lugat_oqi(LUGAT_FAYL)))
 
 # Har rejimning o'z bo'limi: bir vaqtda bitta rejim ishlaydi, shuning uchun sozlamalari to'qnashmaydi
 BANDLAR = [
@@ -51,14 +52,25 @@ BANDLAR = [
         ('kirill', 'preferences-desktop-locale-symbolic', "Yangi lotinga o'girish",
          "шаҳар → şahar, ўғил → öğil. O'chirilsa oddiy kirillcha yoziladi"),
     ]),
-    (None, 'Umumiy', "Parol maydonida o'girish doim o'chiq bo'ladi.", [
+    (None, "Aqlli o'girish", "So'z tugaganda tekshiriladi: xorijiy so'z va havola asliga qaytadi.", [
+        ('darhol', 'document-edit-symbolic', 'Darhol yozish',
+         "Harf tagiga chizilmaydi, o'girish joyida bo'ladi. Biror dasturda harf ikki marta chiqsa, o'chiriladi"),
+        ('istisno', 'web-browser-symbolic', "Havola va email'ga tegmaslik",
+         "www.shifo.uz, info@choy.uz, ch1, Schwann, Washington o'zgarmaydi"),
+        ('lugat', 'accessories-dictionary-symbolic', "Xorijiy so'zlar lug'ati",
+         f"Chrome, Shell, CHARGE va yana {ORNATILGAN_LUGAT - 3} ta so'z o'girilmaydi"),
+        ('organish', 'edit-undo-symbolic', "Qaytarilgan so'zni eslab qolish",
+         "So'zdan keyin darhol Backspace bosilsa, so'z asliga qaytadi va lug'atga yoziladi"),
+    ]),
+    (None, 'Umumiy', "Parol va email maydonida o'girish doim o'chiq bo'ladi.", [
         ('tutuq', 'font-x-generic-symbolic', 'Tutuq belgisi ʼ',
          "ma'no → maʼno, маъно → maʼno (U+02BC)"),
         ('terminal', 'utilities-terminal-symbolic', "Terminalda o'girmaslik",
          "ssh, bash, chmod kabi buyruqlar o'zgarmaydi"),
     ]),
 ]
-QARAM = {'eski_belgi': 'eski', 'kirill': 'kirill_rejim'}   # rejim o'chiq bo'lsa uning ichki sozlamasi xira turadi
+# Ota sozlama o'chiq bo'lsa ichki sozlama xira turadi
+QARAM = {'eski_belgi': 'eski', 'kirill': 'kirill_rejim', 'organish': 'lugat'}
 
 # Toggle bosilganda pastda chiqadigan izoh: (yoqilganda, o'chirilganda)
 XABAR = {
@@ -69,29 +81,35 @@ XABAR = {
     'eski_belgi': ("«o'z» da o' → oʻ, g' → gʻ yoziladi.", "«o'z» da apostrof odatdagi ' bo'ladi."),
     'kirill_rejim': ("«ўз» qo'shildi: Super+Probel bilan tanlanadi.", "«ўз» til ro'yxatidan olindi."),
     'kirill': ("«ўз» da matn yangi lotinda chiqadi.", "«ўз» da oddiy kirillcha yoziladi."),
+    'darhol': ("Harf darhol yoziladi, o'girish joyida bo'ladi.", "Qaror kutayotgan harf tagiga chizilib turadi."),
+    'istisno': ("Havola, email va xorijiy so'z o'girilmaydi.", "Havola va email ham o'giriladi."),
+    'lugat': ("Xorijiy so'zlar lug'ati ishlaydi.", "Lug'at o'chdi: «Chrome» ham «Çrome» bo'ladi."),
+    'organish': ("Qaytarilgan so'z lug'atga yoziladi.", "Qaytarilgan so'z lug'atga yozilmaydi."),
     'tutuq': ("So'z ichidagi apostrof ʼ bo'ladi.", "Apostrof odatdagi ' bo'lib qoladi."),
     'terminal': ("Terminalda matn o'girilmaydi.", "Terminalda ham matn o'giriladi."),
 }
 
+# Rang nomlari (@card_bg_color …) libadwaita 1.5 da ham, yangisida ham ishlaydi
 CSS = """
 .hero { padding: 4px 0 22px; }
 .hero-sarlavha { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
 .hero-izoh { font-size: 15px; }
 .tugma {
-  background-color: var(--card-bg-color);
-  color: var(--card-fg-color);
+  background-color: @card_bg_color;
+  color: @card_fg_color;
   border-radius: 16px;
   min-width: 76px;
   padding: 10px 6px 9px;
-  box-shadow: 0 0 0 1px var(--border-color), 0 3px 0 0 alpha(black, 0.07), 0 10px 18px -10px alpha(black, 0.35);
+  box-shadow: 0 0 0 1px alpha(currentColor, 0.09), 0 3px 0 0 alpha(black, 0.07),
+              0 10px 18px -10px alpha(black, 0.35);
   transition: opacity 220ms ease-out;
 }
-.tugma-harf { font-size: 36px; font-weight: 800; color: var(--accent-color); }
+.tugma-harf { font-size: 36px; font-weight: 800; color: @accent_color; }
 .tugma-asl { font-size: 12px; font-weight: 700; font-family: monospace; opacity: 0.55; }
 .tugma-ochiq { opacity: 0.35; }
 .rejim-belgi {
-  background-color: var(--accent-bg-color);
-  color: var(--accent-fg-color);
+  background-color: @accent_bg_color;
+  color: @accent_fg_color;
   border-radius: 8px;
   padding: 3px 8px;
   font-weight: 800;
@@ -101,11 +119,30 @@ CSS = """
 """
 
 
+def tezkor_belgi(tugma):
+    """Tugma ko'rinishi: libadwaita 1.8 da Adw.ShortcutLabel, eskisida Gtk.ShortcutLabel."""
+    sinf = getattr(Adw, 'ShortcutLabel', None) or Gtk.ShortcutLabel
+    return sinf(accelerator=tugma, valign=Gtk.Align.CENTER)
+
+
+def tugma_qator(nom, bosilganda):
+    """Butun qator tugma: libadwaita 1.6 da Adw.ButtonRow, eskisida bosiladigan ActionRow."""
+    if hasattr(Adw, 'ButtonRow'):
+        qator = Adw.ButtonRow(title=nom, end_icon_name='go-next-symbolic')
+    else:
+        qator = Adw.ActionRow(title=nom, activatable=True)
+        qator.add_suffix(Gtk.Image(icon_name='go-next-symbolic'))
+    qator.connect('activated', lambda *_: bosilganda())
+    return qator
+
+
 class Oyna(Adw.ApplicationWindow):
     def __init__(self, ilova):
         super().__init__(application=ilova, title='Özbek klaviaturasi')
-        self.set_default_size(620, 880)
+        self.set_default_size(640, 900)
         self.s = sozlama.oqi()
+        self.lugat = None
+        self.lugat_qatorlari = []
 
         self.qatorlar = {}
         sahifa = Adw.PreferencesPage()
@@ -120,6 +157,8 @@ class Oyna(Adw.ApplicationWindow):
             for kalit, ikonka, nom, tavsif in qatorlar:
                 self.qatorlar[kalit] = self._almashtirgich(kalit, ikonka, nom, tavsif)
                 guruh.add(self.qatorlar[kalit])
+            if sarlavha == "Aqlli o'girish":
+                guruh.add(self._lugat_muharriri())
             sahifa.add(guruh)
         sahifa.add(self._sinov())
         sahifa.add(self._tezkor())
@@ -129,9 +168,16 @@ class Oyna(Adw.ApplicationWindow):
         menyu = Gio.Menu()
         menyu.append('Ilova haqida', 'app.haqida')
         bosh.pack_end(Gtk.MenuButton(icon_name='open-menu-symbolic', menu_model=menyu, tooltip_text='Menyu'))
+        self.banner = Adw.Banner(title='Rejimlar hali yoqilmagan', button_label='Yoqish')
+        self.banner.connect('button-clicked', self._yoqish)
         qobiq = Adw.ToolbarView(content=self.toastlar)
         qobiq.add_top_bar(bosh)
+        qobiq.add_top_bar(self.banner)
         self.set_content(qobiq)
+
+        self._kuzatuvchi = sozlama.kuzat(lambda: GLib.idle_add(self._lugat_yangila), sozlama.LUGAT)
+        self._lugat_yangila()
+        self._banner_yangila()
         self._yangila()
 
     # -- bo'limlar --
@@ -181,6 +227,14 @@ class Oyna(Adw.ApplicationWindow):
         qator.connect('notify::active', self._ozgardi, kalit)
         return qator
 
+    def _lugat_muharriri(self):
+        self.lugat_qator = Adw.ExpanderRow(title="Mening lug'atim")
+        self.lugat_qator.add_prefix(Gtk.Image(icon_name='bookmark-new-symbolic'))
+        self.yangi_soz = Adw.EntryRow(title="So'z qo'shish (masalan, Photoshop)", show_apply_button=True)
+        self.yangi_soz.connect('apply', self._soz_qosh)
+        self.lugat_qator.add_row(self.yangi_soz)
+        return self.lugat_qator
+
     def _sinov(self):
         guruh = Adw.PreferencesGroup(
             title="Sinab ko'rish",
@@ -202,15 +256,14 @@ class Oyna(Adw.ApplicationWindow):
     def _tezkor(self):
         guruh = Adw.PreferencesGroup(title='Tezkor tugmalar')
         for nom, tavsif, tugma in (
-            ('Rejimni almashtirish', 'öz → o\'z → ўз; panelda tanlash ham mumkin', '<Super>space'),
+            ('Rejimni almashtirish', "öz → o'z → ўз; panelda tanlash ham mumkin", '<Super>space'),
             ('Shu oynani ochish', "Panel menyusida toggle'lar ham bor", '<Super>k'),
         ):
             qator = Adw.ActionRow(title=nom, subtitle=tavsif)
-            qator.add_suffix(Adw.ShortcutLabel(accelerator=tugma, valign=Gtk.Align.CENTER))
+            qator.add_suffix(tezkor_belgi(tugma))
             guruh.add(qator)
-        tugma = Adw.ButtonRow(title='Til sozlamalarini ochish', end_icon_name='go-next-symbolic')
-        tugma.connect('activated', lambda *_: subprocess.Popen(['gnome-control-center', 'keyboard']))
-        guruh.add(tugma)
+        guruh.add(tugma_qator('Til sozlamalarini ochish',
+                              lambda: subprocess.Popen(['gnome-control-center', 'keyboard'])))
         return guruh
 
     # -- hodisalar --
@@ -218,11 +271,15 @@ class Oyna(Adw.ApplicationWindow):
     def _ozgardi(self, qator, _param, kalit):
         self.s[kalit] = qator.get_active()
         sozlama.yoz(self.s)
-        if kalit in REJIM_MANBA:
-            self._manba(REJIM_MANBA[kalit], self.s[kalit])
-        self.toastlar.dismiss_all()
-        self.toastlar.add_toast(Adw.Toast(title=XABAR[kalit][0 if self.s[kalit] else 1], timeout=4))
+        if kalit in REJIM_MANBA and os.path.exists(IBUS_KOMPONENT):
+            foydalanuvchi.manba(REJIM_MANBA[kalit], self.s[kalit])
+        self._xabar(XABAR[kalit][0 if self.s[kalit] else 1])
         self._yangila()
+
+    def _xabar(self, matn, muddat=4):
+        if hasattr(self.toastlar, 'dismiss_all'):
+            self.toastlar.dismiss_all()
+        self.toastlar.add_toast(Adw.Toast(title=matn, timeout=muddat))
 
     def _yangila(self):
         for kalit, ota in QARAM.items():
@@ -235,28 +292,72 @@ class Oyna(Adw.ApplicationWindow):
 
     def _ogir(self):
         return ogir(self.kirish.get_text(), lotin=self.s['lotin'], kirill=self.s['kirill'],
-                    sh_ajrat=self.s['sh_ajrat'], tutuq=self.s['tutuq'])
+                    sh_ajrat=self.s['sh_ajrat'], tutuq=self.s['tutuq'], istisnolar=self.s['istisno'],
+                    lugat=self.lugat if self.s['lugat'] else None)
 
     def _nusxa(self, _tugma):
         self.get_clipboard().set(self._ogir())
-        self.toastlar.add_toast(Adw.Toast(title='Nusxa olindi', timeout=2))
+        self._xabar('Nusxa olindi', 2)
 
-    def _manba(self, juft, yoq):
-        """«o'z» yoki «ўз» rejimi GNOME til ro'yxatiga qo'shiladi yoki undan olinadi."""
-        manba = Gio.SettingsSchemaSource.get_default()
-        if not os.path.exists(IBUS_KOMPONENT) or not manba or not manba.lookup(MANBALAR, True):
+    # -- lug'at --
+
+    def _lugat_yangila(self):
+        for qator in self.lugat_qatorlari:
+            self.lugat_qator.remove(qator)
+        self.lugat_qatorlari = []
+        sozlar = sozlama.lugat_sozlari()
+        for soz in sozlar:
+            qator = Adw.ActionRow(title=GLib.markup_escape_text(soz))
+            ochir = Gtk.Button(icon_name='user-trash-symbolic', tooltip_text="Lug'atdan olib tashlash",
+                               valign=Gtk.Align.CENTER)
+            ochir.add_css_class('flat')
+            ochir.connect('clicked', lambda _t, s=soz: self._soz_ochir(s))
+            qator.add_suffix(ochir)
+            self.lugat_qator.add_row(qator)
+            self.lugat_qatorlari.append(qator)
+        self.lugat_qator.set_subtitle(f"{len(sozlar)} ta so'z o'girilmaydi" if sozlar
+                                      else "Bo'sh: o'zingiz yoki Backspace orqali qo'shiladi")
+        self.lugat = Lugat(lugat_oqi(LUGAT_FAYL, sozlama.LUGAT))
+        if hasattr(self, 'natija'):
+            self._yangila()
+        return False
+
+    def _soz_qosh(self, qator):
+        soz = qator.get_text().strip()
+        if len(soz) < 2:
             return
-        sozlamalar = Gio.Settings.new(MANBALAR)
-        royxat = list(sozlamalar.get_value('sources').unpack())
-        if yoq and juft not in royxat:
-            keyingi = [i for i, (_, nom) in enumerate(royxat)
-                       if nom in TARTIB and TARTIB.index(nom) > TARTIB.index(juft[1])]
-            royxat.insert(keyingi[0] if keyingi else len(royxat), juft)
-        elif not yoq and juft in royxat:
-            royxat.remove(juft)
-        else:
-            return
-        sozlamalar.set_value('sources', GLib.Variant('a(ss)', royxat))
+        sozlama.lugat_qosh(soz)
+        qator.set_text('')
+        self._xabar(f"«{soz}» lug'atga qo'shildi: endi o'girilmaydi.")
+
+    def _soz_ochir(self, soz):
+        sozlama.lugat_ochir(soz)
+        self._xabar(f"«{soz}» lug'atdan olindi: endi odatdagidek o'giriladi.")
+
+    # -- birinchi ishga tushirish --
+
+    def _banner_yangila(self):
+        self.banner.set_revealed(os.path.exists(IBUS_KOMPONENT) and not foydalanuvchi.yoqilganmi())
+
+    def _yoqish(self, _banner):
+        self.banner.set_button_label('Yoqilmoqda…')
+
+        def ish():
+            foydalanuvchi.ibus_qayta()
+            foydalanuvchi.rejimlar_yoq()
+            qoyildi, _izoh = foydalanuvchi.tezkor_qosh()
+            GLib.idle_add(tugadi, qoyildi)
+
+        def tugadi(qoyildi):
+            self.banner.set_button_label('Yoqish')
+            self._banner_yangila()
+            self._xabar('Rejimlar yoqildi: Super+Probel bilan tanlanadi.'
+                        + (' Sozlamalar: Super+K.' if qoyildi else ''), 6)
+            return False
+
+        threading.Thread(target=ish, daemon=True).start()
+
+    # -- sinov uchun surat --
 
     def skrin(self, yol):
         vidjet = self.get_content()
@@ -268,19 +369,20 @@ class Oyna(Adw.ApplicationWindow):
         Gtk.WidgetPaintable.new(vidjet).snapshot(surat, en, boy)
         self.get_renderer().render_texture(surat.to_node(), None).save_to_png(yol)
 
-    def pastga(self):
+    def aylantir(self, ulush):
         vidjet = self.get_content()
         while vidjet and not isinstance(vidjet, Gtk.ScrolledWindow):
             vidjet = vidjet.get_first_child() if not isinstance(vidjet, Adw.ToolbarView) \
                 else vidjet.get_content()
         if vidjet:
             o = vidjet.get_vadjustment()
-            o.set_value(o.get_upper())
+            o.set_value((o.get_upper() - o.get_page_size()) * ulush)
 
 
 class Ilova(Adw.Application):
     def __init__(self, skrin=None):
-        super().__init__(application_id=ILOVA_ID, flags=Gio.ApplicationFlags.NON_UNIQUE if skrin else Gio.ApplicationFlags.DEFAULT_FLAGS)
+        super().__init__(application_id=ILOVA_ID,
+                         flags=Gio.ApplicationFlags.NON_UNIQUE if skrin else Gio.ApplicationFlags.DEFAULT_FLAGS)
         self.skrin_yoli = skrin
         haqida = Gio.SimpleAction.new('haqida', None)
         haqida.connect('activate', self._haqida)
@@ -296,28 +398,34 @@ class Ilova(Adw.Application):
     def do_activate(self):
         oyna = self.get_active_window() or Oyna(self)
         if self.skrin_yoli:
-            oyna.set_default_size(620, 1500)
-            GLib.timeout_add(900, self._suratga_ol, oyna)
+            oyna.set_default_size(640, 1500)
+            GLib.timeout_add(900, self._suratlar, oyna, [0, 0.5, 1])
         oyna.present()
 
-    def _suratga_ol(self, oyna):
-        oyna.skrin(self.skrin_yoli)
-        oyna.pastga()
-        GLib.timeout_add(400, self._pastini_ol, oyna)
-        return False
+    def _suratlar(self, oyna, ulushlar):
+        """Sahifa yuqoridan pastgacha bir necha bo'lak qilib rasmga olinadi: a-0.png, a-1.png …"""
+        ulush = ulushlar.pop(0)
+        oyna.aylantir(ulush)
 
-    def _pastini_ol(self, oyna):
-        oyna.skrin(self.skrin_yoli.replace('.png', '-past.png'))
-        self.quit()
+        def ol():
+            oyna.skrin(self.skrin_yoli.replace('.png', f'-{2 - len(ulushlar)}.png'))
+            if ulushlar:
+                GLib.timeout_add(100, self._suratlar, oyna, ulushlar)
+            else:
+                self.quit()
+            return False
+        GLib.timeout_add(400, ol)
         return False
 
     def _haqida(self, *_):
-        Adw.AboutDialog(
-            application_name='Özbek klaviaturasi', application_icon='yangi-klaviatura',
-            version=VERSIYA, developer_name='adkhamjon1',
-            website='https://github.com/adkhamjon1/yangi-klaviatura',
-            comments="Yangi o'zbek lotin alifbosi (Ö, Ğ, Ş, Ç) uchun klaviatura va o'girgich.",
-        ).present(self.get_active_window())
+        malumot = dict(application_name='Özbek klaviaturasi', application_icon='yangi-klaviatura',
+                       version=VERSIYA, developer_name='adkhamjon1',
+                       website='https://github.com/adkhamjon1/yangi-klaviatura',
+                       comments="Yangi o'zbek lotin alifbosi (Ö, Ğ, Ş, Ç) uchun klaviatura va o'girgich.")
+        if hasattr(Adw, 'AboutDialog'):
+            Adw.AboutDialog(**malumot).present(self.get_active_window())
+        else:
+            Adw.AboutWindow(transient_for=self.get_active_window(), **malumot).present()
 
 
 if __name__ == '__main__':

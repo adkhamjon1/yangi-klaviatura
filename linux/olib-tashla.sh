@@ -4,8 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-python3 manbalar.py -xkb:ozbek -ibus:ozbek-lotin -ibus:ozbek-eski -ibus:ozbek-kirill
-python3 tezkor.py olib-tashla
+python3 ibus/foydalanuvchi.py ochir
 
 if [ -e /usr/share/ibus/component/ozbek.xml ]; then
   sudo rm -f /usr/share/ibus/component/ozbek.xml \
