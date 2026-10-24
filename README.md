@@ -15,8 +15,9 @@ klaviaturadan qidirish shart emas.
 | **o'z** | Eski lotinda yozish kerak bo'lganda | Hozirgi alifbo (o', g', sh, ch) o'zgarishsiz yoziladi; apostrof odatdagidek ' tugmasida |
 | **ўз** | Kirillcha yozuvchilar | Odatdagi o'zbek kirill klaviaturasida yoziladi, matn yangi lotinda chiqadi; o'girish o'chirilsa oddiy kirillcha yoziladi |
 
-Bir vaqtda bitta rejim ishlaydi, rejim Super+Probel bilan almashtiriladi. Har rejimning
-sozlamasi faqat o'sha rejimga tegishli.
+Bir vaqtda bitta rejim ishlaydi, rejim Super+Probel (Windows'da Win+Probel) bilan almashtiriladi.
+Har rejimning sozlamasi faqat o'sha rejimga tegishli. Windows'da rejim nomi katta harf bilan
+yoziladi: ÖZ, O'Z, ЎЗ.
 
 ### Tugmalar («öz»)
 
@@ -126,7 +127,41 @@ python3 linux/ibus/ogirgich.py "O'zbekiston — Ўзбекистон"
 python3 linux/ibus/ogirgich.py < eski.txt > yangi.txt
 ```
 
-## Windows va macOS
+## Windows
+
+Windows 10 va 11 uchun. **Haqiqiy Windows'da hali sinalmagan.** O'girish yadrosi Linux'dagi
+bilan bir xil ishlashi sinovlar bilan tekshirilgan (100 umumiy holat va 165 824 qatorli korpus
+bayt-bayt mos). O'rnatuvchi va olib tashlovchi Wine'da sinalgan. Wine'da matn xizmatini
+ro'yxatga olish ishlamaydi, shuning uchun yozishning o'zi Windows'da sinaladi.
+
+### O'rnatish
+
+`ozbek-klaviaturasi-1.0.0.exe` ishga tushiriladi, administrator huquqi so'raladi. O'rnatuvchi
+matn xizmatini (TSF) 64 va 32-bitli dasturlar uchun ro'yxatga oladi va «ÖZ», «O'Z», «ЎЗ»
+rejimlarini o'zbek (lotin) tiliga qo'shadi. Til ro'yxatda bo'lmasa, Windows uni o'zi qo'shadi.
+Start menyusida «Özbek klaviaturasi» sozlamalar oynasi paydo bo'ladi.
+
+Rejim Win+Probel bilan almashtiriladi. Windows'da W, C, [, ] tugmalari alohida klaviatura sxemasida
+emas, matn xizmatining o'zida turadi. Asl belgilar o'ng Alt (AltGr) bilan yoziladi.
+
+Sozlamalar `HKCU\Software\YangiKlaviatura` da, shaxsiy lug'at esa `%APPDATA%\YangiKlaviatura\lugat.txt`
+da saqlanadi. Dastur olib tashlanganda ular o'chirilmaydi.
+
+Olib tashlash uchun Sozlamalar → Ilovalar → «Özbek klaviaturasi» ochiladi. Jimgina olib tashlash
+buyrug'i: `"C:\Program Files\YangiKlaviatura\olib-tashlash.exe" /S`.
+
+### Yig'ish
+
+Windows qismi Linux'da yig'iladi:
+
+```bash
+sudo apt install g++-mingw-w64-x86-64-win32 g++-mingw-w64-i686-win32 mono-devel nsis python3-pil
+bash windows/qur.sh   # sinovlar → ozbek64.dll, ozbek32.dll → Sozlamalar.exe → o'rnatuvchi
+```
+
+Natija `windows/build/` papkasida chiqadi. DLL'lar faqat Windows'ning o'z kutubxonalariga bog'lanadi.
+
+## macOS
 
 Tayyorlanmoqda.
 

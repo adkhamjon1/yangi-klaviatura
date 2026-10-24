@@ -1,0 +1,191 @@
+﻿# Header, don't edit
+NLF v6
+# Start editing here
+# Language ID
+1091
+# Font and size - dash (-) means default
+-
+-
+# Codepage - dash (-) means ASCII code page
+1254
+# RTL - anything else than RTL means LTR
+-
+# Özbek klaviaturasi o'rnatuvchisi uchun yozilgan (NSIS'dagi Uzbek.nlf o'rniga)
+# ^Branding
+Nullsoft Install System %s
+# ^SetupCaption
+$(^Name) — o'rnatish
+# ^UninstallCaption
+$(^Name) — olib tashlash
+# ^LicenseSubCaption
+: Litsenziya shartnomasi
+# ^ComponentsSubCaption
+: Tarkibiy qismlar
+# ^DirSubCaption
+: O'rnatish papkasi
+# ^InstallingSubCaption
+: O'rnatilmoqda
+# ^CompletedSubCaption
+: Tugadi
+# ^UnComponentsSubCaption
+: Tarkibiy qismlar
+# ^UnDirSubCaption
+: Papka
+# ^ConfirmSubCaption
+: Tasdiqlash
+# ^UninstallingSubCaption
+: Olib tashlanmoqda
+# ^UnCompletedSubCaption
+: Tugadi
+# ^BackBtn
+< &Orqaga
+# ^NextBtn
+&Keyingi >
+# ^AgreeBtn
+&Roziman
+# ^AcceptBtn
+Shartnoma shartlariga &roziman
+# ^DontAcceptBtn
+Shartnoma shartlariga rozi &emasman
+# ^InstallBtn
+&O'rnatish
+# ^UninstallBtn
+Olib &tashlash
+# ^CancelBtn
+Bekor qilish
+# ^CloseBtn
+&Yopish
+# ^BrowseBtn
+&Tanlash...
+# ^ShowDetailsBtn
+&Batafsil
+# ^ClickNext
+Davom etish uchun «Keyingi» tugmasini bosing.
+# ^ClickInstall
+O'rnatishni boshlash uchun «O'rnatish» tugmasini bosing.
+# ^ClickUninstall
+Olib tashlash uchun «Olib tashlash» tugmasini bosing.
+# ^Name
+Nomi
+# ^Completed
+Tugadi
+# ^LicenseText
+$(^NameDA) o'rnatilishidan oldin litsenziya shartnomasi bilan tanishib chiqing. Shartlarga rozi bo'lsangiz, «Roziman» tugmasini bosing.
+# ^LicenseTextCB
+$(^NameDA) o'rnatilishidan oldin litsenziya shartnomasi bilan tanishib chiqing. Shartlarga rozi bo'lsangiz, belgini qo'ying. $_CLICK
+# ^LicenseTextRB
+$(^NameDA) o'rnatilishidan oldin litsenziya shartnomasi bilan tanishib chiqing. Shartlarga rozi bo'lsangiz, birinchi variantni tanlang. $_CLICK
+# ^UnLicenseText
+$(^NameDA) olib tashlanishidan oldin litsenziya shartnomasi bilan tanishib chiqing. Shartlarga rozi bo'lsangiz, «Roziman» tugmasini bosing.
+# ^UnLicenseTextCB
+$(^NameDA) olib tashlanishidan oldin litsenziya shartnomasi bilan tanishib chiqing. Shartlarga rozi bo'lsangiz, belgini qo'ying. $_CLICK
+# ^UnLicenseTextRB
+$(^NameDA) olib tashlanishidan oldin litsenziya shartnomasi bilan tanishib chiqing. Shartlarga rozi bo'lsangiz, birinchi variantni tanlang. $_CLICK
+# ^Custom
+Tanlangan
+# ^ComponentsText
+O'rnatiladigan qismlarni belgilang, keragi yo'g'idan belgini oling. $_CLICK
+# ^ComponentsSubText1
+O'rnatish turi:
+# ^ComponentsSubText2_NoInstTypes
+O'rnatiladigan qismlar:
+# ^ComponentsSubText2
+Yoki qo'shimcha qismlarni tanlang:
+# ^UnComponentsText
+Olib tashlanadigan qismlarni belgilang, qoladiganidan belgini oling. $_CLICK
+# ^UnComponentsSubText1
+Olib tashlash turi:
+# ^UnComponentsSubText2_NoInstTypes
+Olib tashlanadigan qismlar:
+# ^UnComponentsSubText2
+Yoki qo'shimcha qismlarni tanlang:
+# ^DirText
+$(^NameDA) quyidagi papkaga o'rnatiladi. Boshqa papka kerak bo'lsa, «Tanlash» tugmasini bosing. $_CLICK
+# ^DirSubText
+O'rnatish papkasi
+# ^DirBrowseText
+$(^NameDA) o'rnatiladigan papkani tanlang:
+# ^UnDirText
+$(^NameDA) quyidagi papkadan olib tashlanadi. Boshqa papka kerak bo'lsa, «Tanlash» tugmasini bosing. $_CLICK
+# ^UnDirSubText
+""
+# ^UnDirBrowseText
+$(^NameDA) olib tashlanadigan papkani tanlang:
+# ^SpaceAvailable
+"Bo'sh joy: "
+# ^SpaceRequired
+"Kerakli joy: "
+# ^UninstallingText
+$(^NameDA) kompyuterdan olib tashlanadi. $_CLICK
+# ^UninstallingSubText
+Papka:
+# ^FileError
+Faylni yozib bo'lmadi:\r\n\r\n$0\r\n\r\nFayl boshqa dasturda ochiq bo'lishi mumkin. O'rnatishni to'xtatish, qayta urinish yoki shu faylni o'tkazib yuborishni tanlang.
+# ^FileError_NoIgnore
+Faylni yozib bo'lmadi:\r\n\r\n$0\r\n\r\nFayl boshqa dasturda ochiq bo'lishi mumkin. Qayta urinish yoki o'rnatishni bekor qilishni tanlang.
+# ^CantWrite
+"Yozib bo'lmadi: "
+# ^CopyFailed
+Nusxa olinmadi
+# ^CopyTo
+"Nusxa: "
+# ^Registering
+"Ro'yxatga olinmoqda: "
+# ^Unregistering
+"Ro'yxatdan chiqarilmoqda: "
+# ^SymbolNotFound
+"Belgi topilmadi: "
+# ^CouldNotLoad
+"Yuklab bo'lmadi: "
+# ^CreateFolder
+"Papka: "
+# ^CreateShortcut
+"Yorliq: "
+# ^CreatedUninstaller
+"Olib tashlash dasturi: "
+# ^Delete
+"O'chirildi: "
+# ^DeleteOnReboot
+"Qayta yoqilganda o'chiriladi: "
+# ^ErrorCreatingShortcut
+"Yorliq yaratilmadi: "
+# ^ErrorCreating
+"Yaratilmadi: "
+# ^ErrorDecompressing
+Ma'lumotni ochib bo'lmadi. O'rnatuvchi fayl buzilgan bo'lishi mumkin.
+# ^ErrorRegistering
+DLL ro'yxatga olinmadi
+# ^ExecShell
+"Ochildi: "
+# ^Exec
+"Ishga tushirildi: "
+# ^Extract
+"Chiqarildi: "
+# ^ErrorWriting
+"Chiqarishda yozish xatosi: "
+# ^InvalidOpcode
+O'rnatuvchi fayl buzilgan: noma'lum buyruq
+# ^NoOLE
+"OLE yo'q: "
+# ^OutputFolder
+"Papka: "
+# ^RemoveFolder
+"Papka o'chirildi: "
+# ^RenameOnReboot
+"Qayta yoqilganda nomi o'zgaradi: "
+# ^Rename
+"Nomi o'zgardi: "
+# ^Skipped
+"O'tkazib yuborildi: "
+# ^CopyDetails
+Jurnaldan nusxa olish
+# ^LogInstall
+O'rnatish jurnalini yozish
+# ^Byte
+B
+# ^Kilo
+ K
+# ^Mega
+ M
+# ^Giga
+ G

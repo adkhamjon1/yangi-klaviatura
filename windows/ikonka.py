@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """Windows ikonkalari (.ico): rejimlar «ÖZ», «O'Z», «ЎЗ» va ilova «Ö».
 
-    python3 windows/ikonka.py   →  windows/tsf/ikonka/*.ico
+    python3 windows/ikonka.py               →  windows/tsf/ikonka/*.ico
+    python3 windows/ikonka.py --yon <bmp>   →  o'rnatuvchining yon rasmi (qur.sh yasaydi)
 
 Har o'lcham alohida chiziladi (16 pikselda ham harf aniq bo'lishi uchun).
 """
 import subprocess
+import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 PAPKA = Path(__file__).resolve().parent / 'tsf' / 'ikonka'
 OLCHAMLAR = [16, 20, 24, 32, 40, 48, 64, 256]
@@ -41,7 +43,38 @@ def chiz(matn, olcham, shrift_yoli):
     return rasm.resize((olcham, olcham), Image.LANCZOS)
 
 
+def yon_rasm(chiqish):
+    """O'rnatuvchining kirish va yakun sahifasidagi yon rasm (164×314, ikki barobar chiziladi)."""
+    en, boy = 328, 628
+    rasm = Image.new('RGB', (en, boy))
+    tuq = (14, 40, 104)
+    for y in range(boy):
+        t = y / (boy - 1)
+        rasm.paste(tuple(round(a + (b - a) * t) for a, b in zip(FON[:3], tuq)), (0, y, en, y + 1))
+    nur = Image.new('L', (en, boy), 0)                   # yuqori chapdagi yumshoq yorug'lik
+    ImageDraw.Draw(nur).ellipse([-140, -170, 250, 220], fill=34)
+    rasm.paste((255, 255, 255), mask=nur.filter(ImageFilter.GaussianBlur(48)))
+    d = ImageDraw.Draw(rasm, 'RGBA')
+    qalin = shrift()
+    oddiy = subprocess.run(['fc-match', '-f', '%{file}', 'Inter:semibold'], capture_output=True, text=True).stdout or qalin
+
+    def yoz(matn, yol, hajm, markaz_y, rang):
+        f = ImageFont.truetype(yol, hajm)
+        chap, yuqori, ong, past = d.textbbox((0, 0), matn, font=f)
+        d.text(((en - (ong - chap)) / 2 - chap, markaz_y - (past - yuqori) / 2 - yuqori), matn, font=f, fill=rang)
+
+    yoz('ÖZ', qalin, 132, 238, HARF)
+    yoz('Özbek', oddiy, 34, 352, (255, 255, 255, 235))
+    yoz('klaviaturasi', oddiy, 26, 392, (255, 255, 255, 170))
+    yoz('ş   ç   ö   ğ', oddiy, 34, 560, (255, 255, 255, 120))
+    rasm.save(chiqish, format='BMP')
+    print(f'✓ {chiqish}')
+
+
 def main():
+    if len(sys.argv) == 3 and sys.argv[1] == '--yon':
+        yon_rasm(sys.argv[2])
+        return
     PAPKA.mkdir(parents=True, exist_ok=True)
     yol = shrift()
     for nom, matn in IKONKALAR.items():
