@@ -29,28 +29,46 @@ TARTIB = ['ozbek-lotin', 'ozbek-eski', 'ozbek-kirill']
 IBUS_KOMPONENT = '/usr/share/ibus/component/ozbek.xml'
 NAMUNA = "O'zbekiston — cho'l va tog'lar yurti. Тошкент — қадимий шаҳар."
 
+# Har rejimning o'z bo'limi: bir vaqtda bitta rejim ishlaydi, shuning uchun sozlamalari to'qnashmaydi
 BANDLAR = [
-    ('Yozish usullari', "O'zgarish darhol qo'llanadi.", [
+    ('öz', 'Yangi lotin', "Lotincha yoziladi, yangi harflar o'zi chiqadi.", [
         ('tugmalar', 'input-keyboard-symbolic', 'Yangi harflar tugmalarda',
          "W → ş, C → ç, [ → ö, ] → ğ. Asl belgi o'ng Alt bilan yoziladi"),
-        ('lotin', 'edit-find-replace-symbolic', "Eski lotin yozuvidan o'girish",
+        ('lotin', 'edit-find-replace-symbolic', "Eski yozuvdan o'girish",
          "sh → ş, ch → ç, o' → ö, g' → ğ"),
-        ('kirill', 'preferences-desktop-locale-symbolic', "Kirill yozuvidan o'girish",
-         '«ўз» rejimi: шаҳар → şahar, ўғил → öğil'),
-        ('eski', 'accessories-dictionary-symbolic', "Eski lotin rejimi",
-         "«o'z» rejimi: o', g', sh, ch o'zgarishsiz yoziladi"),
-    ]),
-    ('Aniqlik', "Parol maydonida o'girish doim o'chiq bo'ladi.", [
         ('sh_ajrat', 'format-text-strikethrough-symbolic', "s'h → sh",
          "Is'hoq → Ishoq: s va h alohida o'qiladi"),
-        ('tutuq', 'font-x-generic-symbolic', 'Tutuq belgisi ʼ',
-         "ma'no → maʼno (U+02BC)"),
+    ]),
+    ("o'z", 'Eski lotin', "Hozirgi alifbo o'zgarishsiz yoziladi.", [
+        ('eski', 'accessories-dictionary-symbolic', 'Rejim yoqilgan',
+         "O'chirilsa «o'z» til ro'yxatidan olinadi"),
         ('eski_belgi', 'tools-check-spelling-symbolic', 'oʻ va gʻ belgisi',
-         "«o'z» rejimida: o' → oʻ, g' → gʻ (U+02BB)"),
+         "o' → oʻ, g' → gʻ (U+02BB)"),
+    ]),
+    ('ўз', 'Kirill', "Kirillcha yoziladi, matn yangi lotinda chiqadi.", [
+        ('kirill', 'preferences-desktop-locale-symbolic', 'Rejim yoqilgan',
+         "шаҳар → şahar, ўғил → öğil. O'chirilsa «ўз» til ro'yxatidan olinadi"),
+    ]),
+    (None, 'Umumiy', "Parol maydonida o'girish doim o'chiq bo'ladi.", [
+        ('tutuq', 'font-x-generic-symbolic', 'Tutuq belgisi ʼ',
+         "ma'no → maʼno, маъно → maʼno (U+02BC)"),
         ('terminal', 'utilities-terminal-symbolic', "Terminalda o'girmaslik",
          "ssh, bash, chmod kabi buyruqlar o'zgarmaydi"),
     ]),
 ]
+QARAM = {'eski_belgi': 'eski'}   # rejim o'chiq bo'lsa uning ichki sozlamasi xira turadi
+
+# Toggle bosilganda pastda chiqadigan izoh: (yoqilganda, o'chirilganda)
+XABAR = {
+    'tugmalar': ("W, C, [, ] tugmalarida yangi harflar chiqadi.", "W, C, [, ] tugmalari asl belgisini yozadi."),
+    'lotin': ("«öz» da sh, ch, o', g' yangi harfga aylanadi.", "«öz» da sh, ch, o', g' o'zgarmaydi."),
+    'sh_ajrat': ("s'h ajratiladi: Is'hoq → Ishoq.", "s'h o'zgarishsiz qoladi."),
+    'eski': ("«o'z» qo'shildi: Super+Probel bilan tanlanadi, «öz» ga ta'sir qilmaydi.", "«o'z» til ro'yxatidan olindi."),
+    'eski_belgi': ("«o'z» da o' → oʻ, g' → gʻ yoziladi.", "«o'z» da apostrof odatdagi ' bo'ladi."),
+    'kirill': ("«ўз» qo'shildi: Super+Probel bilan tanlanadi.", "«ўз» til ro'yxatidan olindi."),
+    'tutuq': ("So'z ichidagi apostrof ʼ bo'ladi.", "Apostrof odatdagi ' bo'lib qoladi."),
+    'terminal': ("Terminalda matn o'girilmaydi.", "Terminalda ham matn o'giriladi."),
+}
 
 CSS = """
 .hero { padding: 4px 0 22px; }
@@ -86,15 +104,22 @@ class Oyna(Adw.ApplicationWindow):
         self.set_default_size(620, 880)
         self.s = sozlama.oqi()
 
+        self.qatorlar = {}
         sahifa = Adw.PreferencesPage()
         sahifa.add(self._hero())
-        for sarlavha, izoh, qatorlar in BANDLAR:
+        sahifa.add(self._izoh())
+        for belgi, sarlavha, izoh, qatorlar in BANDLAR:
             guruh = Adw.PreferencesGroup(title=sarlavha, description=izoh)
+            if belgi:
+                yorliq = Gtk.Label(label=belgi, valign=Gtk.Align.CENTER, width_chars=3)
+                yorliq.add_css_class('rejim-belgi')
+                guruh.set_header_suffix(yorliq)
             for kalit, ikonka, nom, tavsif in qatorlar:
-                guruh.add(self._almashtirgich(kalit, ikonka, nom, tavsif))
+                self.qatorlar[kalit] = self._almashtirgich(kalit, ikonka, nom, tavsif)
+                guruh.add(self.qatorlar[kalit])
             sahifa.add(guruh)
         sahifa.add(self._sinov())
-        sahifa.add(self._rejimlar())
+        sahifa.add(self._tezkor())
 
         self.toastlar = Adw.ToastOverlay(child=sahifa)
         bosh = Adw.HeaderBar(title_widget=Adw.WindowTitle(title='Özbek klaviaturasi', subtitle='Yangi yozuv'))
@@ -137,6 +162,16 @@ class Oyna(Adw.ApplicationWindow):
         guruh.add(quti)
         return guruh
 
+    def _izoh(self):
+        guruh = Adw.PreferencesGroup()
+        qator = Adw.ActionRow(
+            title='Bir vaqtda bitta rejim ishlaydi',
+            subtitle="Rejim Super+Probel bilan tanlanadi. Har bo'limdagi sozlama faqat o'sha rejimga "
+                     "tegishli, shuning uchun ular bir-biriga xalal bermaydi.")
+        qator.add_prefix(Gtk.Image(icon_name='dialog-information-symbolic'))
+        guruh.add(qator)
+        return guruh
+
     def _almashtirgich(self, kalit, ikonka, nom, tavsif):
         qator = Adw.SwitchRow(title=nom, subtitle=tavsif, active=self.s[kalit])
         qator.add_prefix(Gtk.Image(icon_name=ikonka))
@@ -161,20 +196,10 @@ class Oyna(Adw.ApplicationWindow):
         guruh.add(self.natija)
         return guruh
 
-    def _rejimlar(self):
-        guruh = Adw.PreferencesGroup(title='Rejimlar')
-        for belgi, nom, tavsif in (
-            ('öz', 'Yangi lotin', "Lotincha yoziladi, yangi harflar o'zi chiqadi"),
-            ("o'z", 'Eski lotin', "Hozirgi alifbo: o', g', sh, ch o'zgarishsiz"),
-            ('ўз', 'Kirill', 'Kirillcha yoziladi, matn yangi lotinda chiqadi'),
-        ):
-            qator = Adw.ActionRow(title=nom, subtitle=tavsif)
-            yorliq = Gtk.Label(label=belgi, valign=Gtk.Align.CENTER, width_chars=3)
-            yorliq.add_css_class('rejim-belgi')
-            qator.add_prefix(yorliq)
-            guruh.add(qator)
+    def _tezkor(self):
+        guruh = Adw.PreferencesGroup(title='Tezkor tugmalar')
         for nom, tavsif, tugma in (
-            ('Rejimni almashtirish', 'Panelda tanlash ham mumkin', '<Super>space'),
+            ('Rejimni almashtirish', 'öz → o\'z → ўз; panelda tanlash ham mumkin', '<Super>space'),
             ('Shu oynani ochish', "Panel menyusida toggle'lar ham bor", '<Super>k'),
         ):
             qator = Adw.ActionRow(title=nom, subtitle=tavsif)
@@ -192,9 +217,13 @@ class Oyna(Adw.ApplicationWindow):
         sozlama.yoz(self.s)
         if kalit in REJIM_MANBA:
             self._manba(REJIM_MANBA[kalit], self.s[kalit])
+        self.toastlar.dismiss_all()
+        self.toastlar.add_toast(Adw.Toast(title=XABAR[kalit][0 if self.s[kalit] else 1], timeout=4))
         self._yangila()
 
     def _yangila(self):
+        for kalit, ota in QARAM.items():
+            self.qatorlar[kalit].set_sensitive(self.s[ota])
         if self.s['tugmalar']:
             self.tugmalar_qatori.remove_css_class('tugma-ochiq')
         else:
