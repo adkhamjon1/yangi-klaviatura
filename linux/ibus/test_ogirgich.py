@@ -154,6 +154,43 @@ class Istisnolar(unittest.TestCase):
         self.assertEqual(og.ekran(), 'shifo.uz')            # .uz kelganda so'z asliga qaytdi
 
 
+HOLATLAR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'sinov', 'holatlar.tsv')
+
+
+def holatlar():
+    """sinov/holatlar.tsv — C++ yadro ham shu holatlar bilan sinaladi."""
+    with open(HOLATLAR, encoding='utf-8') as f:
+        for qator in f:
+            qator = qator.rstrip('\n')
+            if qator and not qator.startswith('#'):
+                bayroq, matn, kutilgan = qator.split('\t')
+                yield bayroq, matn, kutilgan
+
+
+def sozlama_bayroqdan(bayroq):
+    s = {}
+    for b in [] if bayroq == '-' else bayroq.split(','):
+        if b == 'L':
+            s['lugat'] = Lugat(lugat_oqi(LUGAT_FAYL))
+        elif b.startswith('lugat='):
+            s['lugat'] = Lugat(b[6:].split('|'))
+        elif b == 'tutuq':
+            s['tutuq'] = True
+        else:
+            s[{'-lotin': 'lotin', '-kirill': 'kirill', '-sh': 'sh_ajrat', '-istisno': 'istisnolar'}[b]] = False
+    return s
+
+
+class UmumiyHolatlar(unittest.TestCase):
+    def test_holatlar(self):
+        soni = 0
+        for bayroq, matn, kutilgan in holatlar():
+            with self.subTest(matn=matn, bayroq=bayroq):
+                self.assertEqual(ogir(matn, **sozlama_bayroqdan(bayroq)), kutilgan)
+            soni += 1
+        self.assertGreater(soni, 90)
+
+
 class EskiYozuvda(unittest.TestCase):
     def test_teskari(self):
         self.assertEqual(eski_yozuvda('Çrome'), 'Chrome')
