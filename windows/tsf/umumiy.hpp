@@ -34,8 +34,13 @@ inline void ayir() { InterlockedDecrement(&havolalar); }
 struct WinSozlama {
     ozbek::DvigatelSozlama dvigatel;
     bool darhol = true;
+    bool jurnal = false;
 };
 WinSozlama sozlama_oqi();
+bool sozlama_ber(const wchar_t* kalit);     // bitta toggle (yozilmagan bo'lsa standart qiymat)
+bool sozlama_yoz(const wchar_t* kalit, bool qiymat);
+std::wstring modul_papkasi();               // DLL turgan papka (Sozlamalar.exe ham shu yerda)
+void jurnal_yoz(const std::wstring& qator); // faqat sozlamada «jurnal» yoqilganda chaqiriladi
 ozbek::Lugat lugat_yasa();                  // o'rnatilgan + foydalanuvchiniki
 void lugatga_qosh(const ozbek::Matn& soz);
 std::wstring papka(int csidl_turi);         // masalan %APPDATA%\YangiKlaviatura (papka yaratiladi)

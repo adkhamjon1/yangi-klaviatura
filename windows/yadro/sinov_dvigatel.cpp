@@ -117,6 +117,18 @@ int main(int argc, char** argv) {
         holat(Rejim::Kirill, false, U"шаҳар", U"шаҳар", s);
     }
     holat(Rejim::Oz, false, U"s^", U"s");               // Ctrl kutayotgan harfni qoldiradi
+    // «tagiga»da butun so'z kompozitsiyada: so'z oxirida istisno va lug'at qo'llanadi
+    holat(Rejim::Oz, false, U"www.shifo.uz/chorak ", U"www.shifo.uz/chorak ");
+    holat(Rejim::Oz, false, U"info@choy.uz ", U"info@choy.uz ");
+    holat(Rejim::Oz, false, U"Chrome va Shell ", U"Chrome va Shell ");
+    holat(Rejim::Oz, false, U"Çrome ", U"Chrome ");
+    holat(Rejim::Oz, false, U"kas\nshahar ", U"kas\nşahar ");    // kutayotgan s Enter'dan oldin yoziladi
+    holat(Rejim::Oz, false, U"kas shahar ", U"kas şahar ");
+    holat(Rejim::Oz, false, U"shax\bhar ", U"şahar ");            // kompozitsiya ichida Backspace
+    holat(Rejim::Oz, false, U"s\b", U"");
+    holat(Rejim::Oz, false, U"wc[] ", U"şçöğ ");
+    holat(Rejim::Oz, true, U"wc[] ", U"şçöğ ");
+    holat(Rejim::Kirill, false, U"шаҳар\nЎзбекистон ", U"şahar\nÖzbekiston ");
     // «darhol» — linux DARHOL
     holat(Rejim::Oz, true, U"shahar ", U"şahar ");
     holat(Rejim::Oz, true, U"O'zbekiston Is'hoq ", U"Özbekiston Ishoq ");

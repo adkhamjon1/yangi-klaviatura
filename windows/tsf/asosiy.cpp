@@ -5,6 +5,7 @@
 #include "resurs.h"
 #include "umumiy.hpp"
 
+
 namespace xizmat {
 
 HINSTANCE modul = nullptr;
@@ -62,6 +63,10 @@ const Profil PROFILLAR[] = {
     {&PROFIL_ESKI, L"O'zbek — eski lotin (o'z)", IKONKA_ESKI},
     {&PROFIL_KIRILL, L"Ўзбек — kirilldan yangi lotinga (ўз)", IKONKA_KIRILL},
 };
+// O'rinbosar sxema: o'zbek (lotin) tili + US tugmalari (HKL 04090443). Windows uz-Latn qo'shilganda uni
+// o'zi yaratadi (Keyboard Layout\Substitutes: 00000443 → 00000409). en-US ning 04090409 i bo'lsa,
+// fokus almashganda Windows HKL bo'yicha en-US klaviaturasini tanlab, rejimni o'chirib qo'yardi.
+constexpr ULONG_PTR ORINBOSAR_HKL = 0x04090443;
 const GUID* TOIFALAR[] = {&GUID_TFCAT_TIP_KEYBOARD, &TOIFA_IMMERSIVE, &TOIFA_SYSTRAY};
 
 std::wstring dll_yoli() {
@@ -98,9 +103,12 @@ HRESULT profillar_yoz(bool yoz) {
     const std::wstring yol = dll_yoli();
     for (const auto& p : PROFILLAR) {
         if (yoz) {
+            // eski versiyadan qolgan profil yangi qiymatlar (o'rinbosar sxema) bilan qayta yoziladi;
+            // til ro'yxatidagi yozuvni o'rnatuvchi keyin InstallLayoutOrTip bilan tiklaydi
+            mgr->UnregisterProfile(CLSID_OZBEK, TIL, *p.guid, 0);
             hr = mgr->RegisterProfile(CLSID_OZBEK, TIL, *p.guid, p.nom, static_cast<ULONG>(wcslen(p.nom)), yol.c_str(),
                                       static_cast<ULONG>(yol.size()), static_cast<ULONG>(-p.ikonka),
-                                      reinterpret_cast<HKL>(static_cast<ULONG_PTR>(0x04090409)), 0, TRUE, 0);
+                                      reinterpret_cast<HKL>(ORINBOSAR_HKL), 0, TRUE, 0);
             if (FAILED(hr)) break;
         } else {
             mgr->UnregisterProfile(CLSID_OZBEK, TIL, *p.guid, 0);
@@ -159,5 +167,14 @@ STDAPI DllUnregisterServer() {
     profillar_yoz(false);
     toifalar_yoz(false);
     RegDeleteTreeW(HKEY_LOCAL_MACHINE, (L"Software\\Classes\\CLSID\\" + guid_matn(CLSID_OZBEK)).c_str());
+    // UnregisterCategory faqat barglarni o'chiradi — TIP kaliti bo'sh ota kalitlari bilan qolardi
+    for (REGSAM korinish : {KEY_WOW64_64KEY, KEY_WOW64_32KEY}) {
+        HKEY k;
+        if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Microsoft\\CTF\\TIP", 0, KEY_ALL_ACCESS | korinish, &k) ==
+            ERROR_SUCCESS) {
+            RegDeleteTreeW(k, guid_matn(CLSID_OZBEK).c_str());
+            RegCloseKey(k);
+        }
+    }
     return S_OK;
 }

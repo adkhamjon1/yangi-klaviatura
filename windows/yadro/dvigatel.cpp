@@ -60,15 +60,17 @@ void Dvigatel::farq(const Matn& oldin, const Matn& yangi, Javob& j) {
 }
 
 void Dvigatel::tasdiqla(bool darhol, Javob& j) {
+    og_.tugat();
     if (darhol) {
-        og_.tugat();
         Matn oldin = ekranda_, yangi = og_.ekran();
         ekranda_ = yangi;
         farq(oldin, yangi, j);
     } else {
-        j.tasdiq += og_.tugat();
+        // kompozitsiyadagi so'z hujjatga o'tadi; keyingi harf yangi kompozitsiya boshlaydi
+        j.tasdiq += og_.ekran();
         j.kompozitsiya.clear();
         j.kompozitsiya_bor = true;
+        unut();
     }
 }
 
@@ -114,11 +116,10 @@ Javob Dvigatel::tugma(const Tugma& t, bool darhol) {
         j.yedi = true;
         return j;
     }
-    const bool kutgan = !og_.kutish.empty();
-    Matn matn = t.altgr ? og_.xom(belgi) : og_.qabul(belgi, tugma_asli);
-    if (!kutgan && og_.kutish.empty() && matn == Matn(1, t.ilova)) return j;
-    j.tasdiq = matn;
-    j.kompozitsiya = og_.korinish();
+    // «tagiga»: butun so'z kompozitsiyada turadi — so'z oxirida istisno va lug'at bilan yoziladi
+    if (t.altgr) og_.xom(belgi);
+    else og_.qabul(belgi, tugma_asli);
+    j.kompozitsiya = og_.ekran();
     j.kompozitsiya_bor = true;
     j.yedi = true;
     return j;
@@ -126,11 +127,17 @@ Javob Dvigatel::tugma(const Tugma& t, bool darhol) {
 
 Javob Dvigatel::soz_oxiri(bool darhol, char32_t chegara, Javob j) {
     if (!darhol) {
-        j.tasdiq += og_.tugat();
+        og_.yakunla();
+        j.tasdiq += og_.token_chiq;
         j.kompozitsiya.clear();
         j.kompozitsiya_bor = true;
-        if (chegara) og_.qabul(chegara);
-        else unut();
+        if (chegara) {  // bo'shliq so'z bilan birga yoziladi — tartib buzilmaydi
+            og_.qabul(chegara);
+            j.tasdiq += chegara;
+            j.yedi = true;
+        } else {
+            unut();     // Enter, Tab ilovaning o'ziga boradi
+        }
         return j;
     }
     const Matn xom = og_.token_xom;
@@ -169,16 +176,23 @@ Javob Dvigatel::orqaga(bool darhol, bool qaytarish_bor, const Qaytarish& q) {
         j.yedi = true;
         return j;
     }
+    if (!darhol) {
+        if (og_.ekran().empty()) {  // kompozitsiya yo'q — ilova o'zi o'chiradi
+            unut();
+            return j;
+        }
+        if (!og_.kutish.empty()) og_.orqaga();
+        else og_.ochirildi();
+        j.kompozitsiya = og_.ekran();
+        j.kompozitsiya_bor = true;
+        j.yedi = true;
+        return j;
+    }
     if (!og_.kutish.empty()) {
         og_.orqaga();
-        if (darhol) {
-            Matn oldin = ekranda_, yangi = og_.ekran();
-            ekranda_ = yangi;
-            farq(oldin, yangi, j);
-        } else {
-            j.kompozitsiya = og_.korinish();
-            j.kompozitsiya_bor = true;
-        }
+        Matn oldin = ekranda_, yangi = og_.ekran();
+        ekranda_ = yangi;
+        farq(oldin, yangi, j);
         j.yedi = true;
         return j;
     }

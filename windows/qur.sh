@@ -21,7 +21,7 @@ build/sinov ../sinov/holatlar.tsv ../linux/ibus/lugat.txt
 build/sinov_dvigatel ../linux/ibus/lugat.txt
 
 # 2. TSF xizmati (MinGW): tizim DLL'laridan boshqa hech narsaga bog'lanmaydi
-MANBA=(tsf/asosiy.cpp tsf/xizmat.cpp tsf/sozlama.cpp tsf/eksport.cpp yadro/ogirgich.cpp yadro/dvigatel.cpp)
+MANBA=(tsf/asosiy.cpp tsf/xizmat.cpp tsf/panel.cpp tsf/sozlama.cpp tsf/eksport.cpp yadro/ogirgich.cpp yadro/dvigatel.cpp)
 for arx in x86_64:64 i686:32; do
   uchlik=${arx%%:*}-w64-mingw32 bit=${arx##*:}
   $uchlik-windres -DVERSIYA_RAQAM="$V1,$V2,$V3,0" -DVERSIYA_MATN="\\\"$VERSIYA\\\"" \
@@ -33,6 +33,10 @@ for arx in x86_64:64 i686:32; do
   $uchlik-strip build/ozbek$bit.dll
   echo "✓ build/ozbek$bit.dll ($(du -k build/ozbek$bit.dll | cut -f1) KB): $($uchlik-objdump -p build/ozbek$bit.dll \
     | grep -oE 'DLL Name: \S+' | cut -d' ' -f3 | sort -u | tr '\n' ' ')"
+  # Haqiqiy Windows'dagi sinov dasturi (o'rnatuvchiga kirmaydi; windows/vm/ da yuritiladi)
+  $uchlik-g++ -std=c++17 -O2 -Wall -static -DUNICODE -D_UNICODE -DWIN32_LEAN_AND_MEAN -DNOMINMAX \
+    -o build/tsf_sinov$bit.exe sinov/tsf_sinov.cpp -lole32 -loleaut32 -luuid -luser32 -lgdi32 -ladvapi32
+  $uchlik-strip build/tsf_sinov$bit.exe
 done
 
 # 3. Sozlamalar oynasi

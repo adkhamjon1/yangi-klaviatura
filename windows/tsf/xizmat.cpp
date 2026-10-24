@@ -6,6 +6,7 @@
 #include <string>
 
 #include "jadval.inc"
+#include "panel.hpp"
 #include "umumiy.hpp"
 
 namespace xizmat {
@@ -51,6 +52,36 @@ private:
 };
 
 constexpr TfClientId MIJOZ_YOQ = 0;  // TF_CLIENTID_NULL (MinGW sarlavhasida yo'q)
+// Xizmat ilovaga qayta yuborgan tugma: lParam'ning bo'sh (25–28) bitlaridan biri belgi bo'ladi
+constexpr LPARAM QAYTA = 0x10000000;
+constexpr UINT POCHTA_TUGMA = WM_APP + 0x4F5A, POCHTA_TIZIM = POCHTA_TUGMA + 1;
+constexpr wchar_t POCHTA_SINFI[] = L"YangiKlaviaturaPochta";
+
+// Qayta yuboriladigan tugma avval shu yashirin oynaga keladi, keyin fokusdagi oynaga jo'natiladi:
+// IMM32 kompozitsiya natijasini ham posted xabar bilan beradi — tugma undan keyin kelishi kerak.
+LRESULT CALLBACK pochta_jarayoni(HWND h, UINT m, WPARAM w, LPARAM l) {
+    if (m == POCHTA_TUGMA || m == POCHTA_TIZIM) {
+        if (HWND f = GetFocus()) PostMessageW(f, m == POCHTA_TIZIM ? WM_SYSKEYDOWN : WM_KEYDOWN, w, l);
+        return 0;
+    }
+    return DefWindowProcW(h, m, w, l);
+}
+
+// Sinf tizim jarayoni bilan ro'yxatga olinadi, o'zimizniki oynaga keyin ulanadi:
+// DLL qayta yuklansa sinf eskirgan manzilga ishora qilmaydi
+HWND pochta_yarat() {
+    WNDCLASSEXW s = {};
+    s.cbSize = sizeof s;
+    if (!GetClassInfoExW(modul, POCHTA_SINFI, &s)) {
+        s.lpfnWndProc = DefWindowProcW;
+        s.hInstance = modul;
+        s.lpszClassName = POCHTA_SINFI;
+        RegisterClassExW(&s);
+    }
+    HWND h = CreateWindowExW(0, POCHTA_SINFI, L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr, modul, nullptr);
+    if (h) SetWindowLongPtrW(h, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(pochta_jarayoni));
+    return h;
+}
 
 template <class T>
 void ozod(T*& p) {
@@ -80,12 +111,38 @@ void kursor_oxirga(TfEditCookie ec, ITfContext* ctx, ITfRange* r) {
 
 bool harf_mi(char32_t c) { return ozbek::harfmi(c); }
 
+// O'ng Alt + W/C/[/] — asl belgi. Alt bilan bosilgan tugma OnKeyDown'ga kelmaydi (WM_SYSKEYDOWN),
+// shuning uchun TSF «saqlangan tugma» (preserved key) sifatida ro'yxatdan o'tkaziladi.
+struct AslTugma {
+    UINT vk;
+    bool shift;
+    char32_t belgi;
+    GUID guid;
+};
+constexpr GUID asl_guid(unsigned char n) {
+    return {0x6c3d81a2, 0x7b44, 0x4f0e, {0x9a, 0x1d, 0x52, 0x8e, 0x0b, 0x7f, 0x31, n}};
+}
+const AslTugma ASL_TUGMALAR[] = {
+    {'W', false, U'w', asl_guid(0)}, {'W', true, U'W', asl_guid(1)}, {'C', false, U'c', asl_guid(2)},
+    {'C', true, U'C', asl_guid(3)},  {VK_OEM_4, false, U'[', asl_guid(4)}, {VK_OEM_4, true, U'{', asl_guid(5)},
+    {VK_OEM_6, false, U']', asl_guid(6)}, {VK_OEM_6, true, U'}', asl_guid(7)},
+};
+
+TF_PRESERVEDKEY saqlangan(const AslTugma& a) {
+    TF_PRESERVEDKEY k;
+    k.uVKey = a.vk;
+    k.uModifiers = TF_MOD_RALT | (a.shift ? TF_MOD_SHIFT : 0);
+    return k;
+}
+
 }  // namespace
 
 class Xizmat final : public ITfTextInputProcessor,
                      public ITfThreadMgrEventSink,
                      public ITfKeyEventSink,
-                     public ITfCompositionSink {
+                     public ITfCompositionSink,
+                     public ITfInputProcessorProfileActivationSink,
+                     public PanelEgasi {
 public:
     Xizmat() { qosh(); }
     ~Xizmat() { ayir(); }
@@ -101,6 +158,8 @@ public:
             *ppv = static_cast<ITfKeyEventSink*>(this);
         else if (riid == IID_ITfCompositionSink)
             *ppv = static_cast<ITfCompositionSink*>(this);
+        else if (riid == IID_ITfInputProcessorProfileActivationSink)
+            *ppv = static_cast<ITfInputProcessorProfileActivationSink*>(this);
         else {
             *ppv = nullptr;
             return E_NOINTERFACE;
@@ -124,17 +183,34 @@ public:
             ITfSource* manba = nullptr;
             if (SUCCEEDED(tm_->QueryInterface(IID_ITfSource, reinterpret_cast<void**>(&manba)))) {
                 manba->AdviseSink(IID_ITfThreadMgrEventSink, static_cast<ITfThreadMgrEventSink*>(this), &tm_kuki_);
+                manba->AdviseSink(IID_ITfInputProcessorProfileActivationSink,
+                                  static_cast<ITfInputProcessorProfileActivationSink*>(this), &profil_kuki_);
                 manba->Release();
             }
             ITfKeystrokeMgr* km = nullptr;
             if (SUCCEEDED(tm_->QueryInterface(IID_ITfKeystrokeMgr, reinterpret_cast<void**>(&km)))) {
                 km->AdviseKeyEventSink(id_, static_cast<ITfKeyEventSink*>(this), TRUE);
+                for (const auto& a : ASL_TUGMALAR) {
+                    TF_PRESERVEDKEY k = saqlangan(a);
+                    km->PreserveKey(id_, a.guid, &k, L"", 0);
+                }
                 km->Release();
             }
             CoCreateInstance(CLSID_TF_InputProcessorProfiles, nullptr, CLSCTX_INPROC_SERVER,
                              IID_ITfInputProcessorProfileMgr, reinterpret_cast<void**>(&profil_));
             hkl_us_ = LoadKeyboardLayoutW(L"00000409", KLF_NOTELLSHELL);
+            // o'rinbosar sxema (04090443) o'rnatilgandan keyin birinchi seansda hali yuklanmagan bo'ladi:
+            // Windows uni kirishda yuklaydi, shu paytgacha xizmat o'zi yuklaydi
+            LoadKeyboardLayoutW(L"00000443", KLF_NOTELLSHELL);
             sozla();
+            pochta_ = pochta_yarat();
+            if (s_.jurnal) jurnal_yoz(L"Activate " + std::to_wstring(reinterpret_cast<ULONG_PTR>(this)) + L" tm=" + std::to_wstring(reinterpret_cast<ULONG_PTR>(tm)));
+            panel_ = new PanelTugma(this);
+            ITfLangBarItemMgr* lm = nullptr;
+            if (SUCCEEDED(tm_->QueryInterface(IID_ITfLangBarItemMgr, reinterpret_cast<void**>(&lm)))) {
+                lm->AddItem(static_cast<ITfLangBarItem*>(panel_));
+                lm->Release();
+            }
             return S_OK;
         } catch (...) {
             Deactivate();
@@ -142,19 +218,41 @@ public:
         }
     }
     STDMETHODIMP Deactivate() override {
+        if (s_.jurnal) jurnal_yoz(L"Deactivate " + std::to_wstring(reinterpret_cast<ULONG_PTR>(this)));
         if (tm_) {
+            if (panel_) {
+                ITfLangBarItemMgr* lm = nullptr;
+                if (SUCCEEDED(tm_->QueryInterface(IID_ITfLangBarItemMgr, reinterpret_cast<void**>(&lm)))) {
+                    lm->RemoveItem(static_cast<ITfLangBarItem*>(panel_));
+                    lm->Release();
+                }
+            }
             ITfKeystrokeMgr* km = nullptr;
             if (SUCCEEDED(tm_->QueryInterface(IID_ITfKeystrokeMgr, reinterpret_cast<void**>(&km)))) {
+                for (const auto& a : ASL_TUGMALAR) {
+                    TF_PRESERVEDKEY k = saqlangan(a);
+                    km->UnpreserveKey(a.guid, &k);
+                }
                 km->UnadviseKeyEventSink(id_);
                 km->Release();
             }
             ITfSource* manba = nullptr;
-            if (tm_kuki_ != TF_INVALID_COOKIE && SUCCEEDED(tm_->QueryInterface(IID_ITfSource, reinterpret_cast<void**>(&manba)))) {
-                manba->UnadviseSink(tm_kuki_);
+            if (SUCCEEDED(tm_->QueryInterface(IID_ITfSource, reinterpret_cast<void**>(&manba)))) {
+                if (tm_kuki_ != TF_INVALID_COOKIE) manba->UnadviseSink(tm_kuki_);
+                if (profil_kuki_ != TF_INVALID_COOKIE) manba->UnadviseSink(profil_kuki_);
                 manba->Release();
             }
         }
-        tm_kuki_ = TF_INVALID_COOKIE;
+        if (panel_) {
+            panel_->uzil();
+            panel_->Release();
+            panel_ = nullptr;
+        }
+        if (pochta_) {
+            DestroyWindow(pochta_);
+            pochta_ = nullptr;
+        }
+        tm_kuki_ = profil_kuki_ = TF_INVALID_COOKIE;
         ozod(komp_);
         ozod(profil_);
         ozod(tm_);
@@ -176,10 +274,14 @@ public:
 
     // -- ITfKeyEventSink --
     STDMETHODIMP OnSetFocus(BOOL) override { return S_OK; }
-    STDMETHODIMP OnTestKeyDown(ITfContext* ctx, WPARAM wp, LPARAM, BOOL* yedi) override {
+    STDMETHODIMP OnTestKeyDown(ITfContext* ctx, WPARAM wp, LPARAM lp, BOOL* yedi) override {
         if (!yedi) return E_INVALIDARG;
         *yedi = FALSE;
-        if (!ctx) return S_OK;
+        if (lp & QAYTA) return S_OK;
+        if (!ctx) {
+            if (s_.jurnal) jurnal_yoz(L"test ctx=null vk=" + std::to_wstring(wp));
+            return S_OK;
+        }
         try {
             *yedi = kerakmi(ctx, wp);
         } catch (...) {
@@ -190,7 +292,7 @@ public:
     STDMETHODIMP OnKeyDown(ITfContext* ctx, WPARAM wp, LPARAM lp, BOOL* yedi) override {
         if (!yedi) return E_INVALIDARG;
         *yedi = FALSE;
-        if (!ctx) return S_OK;
+        if (!ctx || (lp & QAYTA)) return S_OK;
         try {
             if (kerakmi(ctx, wp)) *yedi = ishla(ctx, wp, lp);
         } catch (...) {
@@ -207,8 +309,32 @@ public:
         if (yedi) *yedi = FALSE;
         return S_OK;
     }
-    STDMETHODIMP OnPreservedKey(ITfContext*, REFGUID, BOOL* yedi) override {
-        if (yedi) *yedi = FALSE;
+    STDMETHODIMP OnPreservedKey(ITfContext* ctx, REFGUID g, BOOL* yedi) override {
+        if (!yedi) return E_INVALIDARG;
+        *yedi = FALSE;
+        if (!ctx) return S_OK;
+        try {
+            for (const auto& a : ASL_TUGMALAR) {
+                if (!IsEqualGUID(g, a.guid)) continue;
+                if (kuzat_.ozgardimi()) sozla();
+                const Rejim r = joriy_rejim();
+                if (r != dv_.rejim) {
+                    dv_.unut();
+                    dv_.rejim = r;
+                }
+                // faqat «öz» da tugmalar yangi harf berganda: aks holda o'ng Alt ilovaning o'ziniki
+                if (r != Rejim::Oz || !s_.dvigatel.tugmalar) return S_OK;
+                Tugma t;
+                t.belgi = a.belgi;
+                t.altgr = true;
+                *yedi = bajar(ctx, t, a.vk, 0);
+                if (s_.jurnal) jurnal_yoz(L"saqlangan " + keng(Matn(1, a.belgi)) + L" → " + std::to_wstring(*yedi));
+                break;
+            }
+        } catch (...) {
+            dv_.unut();
+            *yedi = FALSE;
+        }
         return S_OK;
     }
 
@@ -219,11 +345,28 @@ public:
         return S_OK;
     }
 
+    // -- ITfInputProcessorProfileActivationSink: öz ↔ o'z ↔ ўз almashganda xizmat qayta yuklanmaydi --
+    STDMETHODIMP OnActivated(DWORD, LANGID, REFCLSID clsid, REFGUID, REFGUID, HKL, DWORD bayroq) override {
+        if (s_.jurnal && IsEqualCLSID(clsid, CLSID_OZBEK)) jurnal_yoz(L"OnActivated bayroq=" + std::to_wstring(bayroq));
+        if ((bayroq & TF_IPSINK_FLAG_ACTIVE) && IsEqualCLSID(clsid, CLSID_OZBEK) && panel_) panel_->yangila();
+        return S_OK;
+    }
+
+    // -- PanelEgasi --
+    ozbek::Rejim panel_rejimi() override { return joriy_rejim(); }
+    void panel_sozladi() override {
+        dv_.unut();
+        sozla();
+    }
+
 private:
     LONG ref_ = 1;
     ITfThreadMgr* tm_ = nullptr;
     TfClientId id_ = MIJOZ_YOQ;
     DWORD tm_kuki_ = TF_INVALID_COOKIE;
+    DWORD profil_kuki_ = TF_INVALID_COOKIE;
+    PanelTugma* panel_ = nullptr;
+    HWND pochta_ = nullptr;
     ITfInputProcessorProfileMgr* profil_ = nullptr;
     ITfComposition* komp_ = nullptr;
     HKL hkl_us_ = nullptr;
@@ -253,9 +396,20 @@ private:
     }
 
     static bool bosilgan(int vk) { return (GetKeyState(vk) & 0x8000) != 0; }
+    // O'ng Alt: profil ostidagi US sxemasida u Ctrl yubormaydi (AltGr'li sxemalarda Ctrl+Alt bo'lib keladi)
+    static bool altgr_mi() { return bosilgan(VK_RMENU) && !bosilgan(VK_LMENU); }
 
     // TSF bu tugmani bizga beradimi (OnTestKeyDown va OnKeyDown bir xil javob berishi kerak)
-    BOOL kerakmi(ITfContext*, WPARAM wp) {
+    BOOL kerakmi(ITfContext* ctx, WPARAM wp) {
+        BOOL k = kerakmi_(ctx, wp);
+        if (s_.jurnal)
+            jurnal_yoz(L"kerakmi vk=" + std::to_wstring(wp) + L" rejim=" + std::to_wstring(static_cast<int>(dv_.rejim)) +
+                       L" ctrl=" + std::to_wstring(bosilgan(VK_CONTROL)) + L" alt=" + std::to_wstring(bosilgan(VK_MENU)) +
+                       L" ralt=" + std::to_wstring(bosilgan(VK_RMENU)) + L" → " + std::to_wstring(k));
+        return k;
+    }
+
+    BOOL kerakmi_(ITfContext*, WPARAM wp) {
         if (kuzat_.ozgardimi()) sozla();
         Rejim r = joriy_rejim();
         if (r != dv_.rejim) {
@@ -264,7 +418,7 @@ private:
         }
         const bool kutish = !dv_.ogirgich().kutish.empty() || komp_;
         const bool ctrl = bosilgan(VK_CONTROL), alt = bosilgan(VK_MENU);
-        const bool altgr = ctrl && bosilgan(VK_RMENU);
+        const bool altgr = altgr_mi();
         const bool win = bosilgan(VK_LWIN) || bosilgan(VK_RWIN);
         if ((ctrl || alt || win) && !altgr) return kutish;  // faqat kutayotgan harfni qoldirish uchun
         if (r == Rejim::Eski && !s_.dvigatel.eski_belgi) return FALSE;
@@ -295,7 +449,7 @@ private:
     Tugma tugmaga(WPARAM wp, LPARAM lp) {
         Tugma t;
         const bool ctrl = bosilgan(VK_CONTROL), alt = bosilgan(VK_MENU);
-        t.altgr = ctrl && bosilgan(VK_RMENU);
+        t.altgr = altgr_mi();
         t.boshqaruv = (ctrl || alt || bosilgan(VK_LWIN) || bosilgan(VK_RWIN)) && !t.altgr;
         switch (wp) {
             case VK_BACK: t.maxsus = Maxsus::Backspace; return t;
@@ -326,15 +480,31 @@ private:
         return t;
     }
 
-    bool darhol_mi(ITfContext* ctx) {
-        if (!s_.darhol || ctx == darholsiz_) return false;
+    // IMM32 orqali ishlaydigan oddiy dastur (Notepad, EDIT maydoni): CUAS ning vaqtinchalik hujjati
+    static bool imm32_mi(ITfContext* ctx) {
         TF_STATUS holat = {};
-        if (SUCCEEDED(ctx->GetStatus(&holat)) && (holat.dwStaticFlags & TF_SS_TRANSITORY)) return false;
-        return true;
+        return SUCCEEDED(ctx->GetStatus(&holat)) && (holat.dwStaticFlags & TF_SS_TRANSITORY);
     }
 
-    BOOL ishla(ITfContext* ctx, WPARAM wp, LPARAM lp) {
-        Tugma t = tugmaga(wp, lp);
+    bool darhol_mi(ITfContext* ctx) {
+        if (!s_.darhol || ctx == darholsiz_) return false;
+        return !imm32_mi(ctx);
+    }
+
+    // IMM32'da OnTestKeyDown «yeyman» degan tugma ilovaga VK_PROCESSKEY bo'lib boradi: yeyilmasa yo'qoladi.
+    // Shuning uchun u fokusdagi oynaga qayta yuboriladi — posted xabar navbatdagi tugmalardan oldin keladi.
+    void qayta_yubor(WPARAM wp, LPARAM lp) {
+        const bool tizim = (GetKeyState(VK_MENU) & 0x8000) && !(GetKeyState(VK_CONTROL) & 0x8000);
+        if (pochta_) {
+            PostMessageW(pochta_, tizim ? POCHTA_TIZIM : POCHTA_TUGMA, wp, lp | QAYTA);
+        } else if (HWND f = GetFocus()) {
+            PostMessageW(f, tizim ? WM_SYSKEYDOWN : WM_KEYDOWN, wp, lp | QAYTA);
+        }
+    }
+
+    BOOL ishla(ITfContext* ctx, WPARAM wp, LPARAM lp) { return bajar(ctx, tugmaga(wp, lp), wp, lp); }
+
+    BOOL bajar(ITfContext* ctx, const Tugma& t, WPARAM wp, LPARAM lp) {
         const bool darhol = darhol_mi(ctx);
         if (darhol && dv_.oldingi_kerak()) dv_.oldingi_berildi(oldingi_belgi(ctx));
         Javob j = dv_.tugma(t, darhol);
@@ -344,9 +514,15 @@ private:
             dv_.sozla();
         }
         bool yedi = j.yedi;
+        if (s_.jurnal)
+            jurnal_yoz(L"ishla belgi=" + keng(Matn(1, t.belgi)) + L" ilova=" + keng(Matn(1, t.ilova)) +
+                       L" darhol=" + std::to_wstring(darhol) + L" yedi=" + std::to_wstring(j.yedi) + L" oldingi=«" +
+                       keng(j.oldingi) + L"» yoz=«" + keng(j.yoz) + L"» tasdiq=«" + keng(j.tasdiq) + L"» komp=«" +
+                       keng(j.kompozitsiya) + L"»");
         if (darhol) {
             if (j.ozgarish()) {
                 Natija n = almashtir(ctx, j.oldingi, j.yoz);
+                if (s_.jurnal) jurnal_yoz(L"almashtir → " + std::to_wstring(static_cast<int>(n)));
                 if (n != Natija::Bajarildi) {
                     // kursor ko'chgan yoki dastur matnni bermaydi: tugma ilovaga o'tadi
                     dv_.unut();
@@ -356,6 +532,10 @@ private:
             }
         } else if (j.kompozitsiya_bor || !j.tasdiq.empty() || !j.yoz.empty()) {
             kompozitsiya(ctx, j.tasdiq + j.yoz, j.kompozitsiya);
+        }
+        if (!yedi && lp && imm32_mi(ctx)) {
+            qayta_yubor(wp, lp);
+            yedi = true;
         }
         return yedi ? TRUE : FALSE;
     }

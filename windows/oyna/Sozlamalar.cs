@@ -380,7 +380,7 @@ namespace YangiKlaviatura
             Controls.Add(bildirish);
             bildirish.BringToFront();
             bildirishVaqti.Tick += (s, e) => { bildirish.Visible = false; bildirishVaqti.Stop(); };
-            Activated += (s, e) => { LugatniYangila(); BannerniYangila(); };
+            Activated += (s, e) => { ReestrdanYangila(); LugatniYangila(); BannerniYangila(); };
         }
 
         protected override void OnHandleCreated(EventArgs e)
@@ -679,6 +679,19 @@ namespace YangiKlaviatura
         }
 
         // -- holat --
+
+        // Toggle til panelidagi menyudan ham o'zgaradi: oyna qaytib ochilganda reestrdan qayta o'qiladi
+        void ReestrdanYangila()
+        {
+            bool ozgardi = false;
+            foreach (var j in yoqgichlar)
+            {
+                if (!Reestr.Standart.ContainsKey(j.Key)) continue;
+                bool v = Reestr.Oqi(j.Key);
+                if (j.Value.Holat != v) { j.Value.Holat = v; ozgardi = true; }
+            }
+            if (ozgardi) Yangila();
+        }
 
         void Yangila()
         {
