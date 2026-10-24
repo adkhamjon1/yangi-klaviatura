@@ -57,4 +57,7 @@ qosh=(-xkb:ozbek +ibus:ozbek-lotin)
 [ "$eski" = 1 ] && qosh+=(+ibus:ozbek-eski)
 [ "$kirill" = 1 ] && qosh+=(+ibus:ozbek-kirill)
 python3 manbalar.py "${qosh[@]}"
-echo "Almashtirish: Super+Probel. Sozlamalar: «Özbek klaviaturasi» ilovasi."
+
+# 4. Sozlamalar oynasi uchun tezkor tugma (band bo'lsa qo'yilmaydi)
+python3 tezkor.py qosh '<Super>k'
+echo "Almashtirish: Super+Probel. Sozlamalar: Super+K yoki paneldagi til menyusi."

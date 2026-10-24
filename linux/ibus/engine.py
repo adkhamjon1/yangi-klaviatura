@@ -10,6 +10,7 @@ Sozlamalar sozlama.json da turadi va o'zgarsa darhol qo'llanadi.
 """
 import logging
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -43,6 +44,19 @@ KURSOR = {
 # W, C, [, ] oddiy belgi beradi — ularni dvigatelning o'zi yangi harfga aylantiradi.
 ASLI_TUGMA = {asl: yangi for yangi, asl in TUGMA_ASLI.items()}
 APOSTROF = frozenset("'’`‘")
+SOZLAMALAR_OYNASI = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sozlamalar.py')
+# Paneldagi til menyusida har rejimning o'z toggle'lari (keyin «Sozlamalar…» bandi)
+PANEL = {
+    'ozbek-lotin': [('tugmalar', 'Yangi harflar tugmalarda'), ('lotin', "Eski lotindan o'girish")],
+    'ozbek-eski': [('eski_belgi', 'oʻ va gʻ belgisi')],
+    'ozbek-kirill': [('kirill', "Kirilldan o'girish")],
+}
+
+
+def xossa(kalit, tur, nom, holat):
+    bosh = IBus.Text.new_from_string('')
+    return IBus.Property.new(kalit, tur, IBus.Text.new_from_string(nom), '', bosh, True, True, holat,
+                             IBus.PropList())
 
 
 class OzbekEngine(IBus.Engine):
@@ -67,6 +81,25 @@ class OzbekEngine(IBus.Engine):
         self.og.kirill = self.s['kirill']
         self.og.sh_ajrat = self.s['sh_ajrat']
         self.og.tutuq = self.s['tutuq']
+        if self.get_name():
+            self.register_properties(self._xossalar())
+
+    def _xossalar(self):
+        royxat = IBus.PropList()
+        for kalit, nom in PANEL.get(self.get_name(), ()):
+            holat = IBus.PropState.CHECKED if self.s[kalit] else IBus.PropState.UNCHECKED
+            royxat.append(xossa(kalit, IBus.PropType.TOGGLE, nom, holat))
+        royxat.append(xossa('sozlamalar', IBus.PropType.NORMAL, 'Sozlamalar…  (Super+K)', IBus.PropState.UNCHECKED))
+        return royxat
+
+    def do_property_activate(self, nom, holat):
+        if nom == 'sozlamalar':
+            subprocess.Popen([sys.executable, SOZLAMALAR_OYNASI], start_new_session=True,
+                             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        elif nom in sozlama.STANDART:
+            s = sozlama.oqi()
+            s[nom] = holat == IBus.PropState.CHECKED
+            sozlama.yoz(s)                      # kuzatuvchi _sozla() ni chaqiradi
 
     # -- tugmalar --
 
@@ -155,6 +188,10 @@ class OzbekEngine(IBus.Engine):
 
     def do_focus_in(self):
         self.og.unut()
+        self.register_properties(self._xossalar())
+
+    def do_enable(self):
+        self.register_properties(self._xossalar())
 
     def do_focus_out(self):
         # Ilova tagiga chizilgan matnni o'zi yozib qo'yadi (PreeditFocusMode.COMMIT)

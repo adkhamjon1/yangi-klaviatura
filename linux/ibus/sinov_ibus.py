@@ -4,8 +4,12 @@
     python3 linux/ibus/sinov_ibus.py
 
 Sinov alohida, xususiy ibus-daemon nusxasida yuradi: IBus 1.5 da dvigatel butun tizim uchun
-bitta (global), uni almashtirish ish stolidagi yozishga ta'sir qilmasligi kerak.
+bitta (global), uni almashtirish ish stolidagi yozishga ta'sir qilmasligi kerak. Nusxa o'z
+manzil faylini vaqtinchalik papkaga yozadi (XDG_CONFIG_HOME) — aks holda u ~/.config/ibus/bus
+dagi umumiy faylni egallab oladi va GNOME asosiy IBus'ni yo'qotadi (paneldan til belgisi ketadi).
+Dvigatel ham shu papkadan o'qiydi, ya'ni sinov standart sozlamalar bilan yuradi.
 """
+import glob
 import os
 import shutil
 import subprocess
@@ -44,12 +48,15 @@ def aylan(soni=20):
 
 
 def main():
+    umumiy = {f: open(f, 'rb').read() for f in glob.glob(os.path.expanduser('~/.config/ibus/bus/*'))}
     papka = tempfile.mkdtemp(prefix='yangi-klaviatura-ibus-')
     manzil = f'unix:path={papka}/ibus'
     os.environ['IBUS_ADDRESS'] = manzil
     daemon = subprocess.Popen(
         ['ibus-daemon', '--single', '--panel=disable', '--config=disable', '--cache=none', f'--address={manzil}'],
+        env={**os.environ, 'XDG_CONFIG_HOME': f'{papka}/config'},
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    xato = 0
     try:
         for _ in range(100):
             if os.path.exists(f'{papka}/ibus'):
@@ -66,14 +73,27 @@ def main():
         if daemon.poll() is None:
             daemon.terminate()
         shutil.rmtree(papka, ignore_errors=True)
+    for f, eski in umumiy.items():
+        if not os.path.exists(f) or open(f, 'rb').read() != eski:
+            print(f'✗ umumiy IBus manzil fayli o\'zgardi: {f}')
+            xato += 1
     sys.exit(1 if xato else 0)
 
 
 def sinovlar(bus):
     ic = bus.create_input_context('yangi-klaviatura-sinov')
-    ic.set_capabilities(IBus.Capabilite.PREEDIT_TEXT | IBus.Capabilite.FOCUS)
+    ic.set_capabilities(IBus.Capabilite.PREEDIT_TEXT | IBus.Capabilite.FOCUS | IBus.Capabilite.PROPERTY)
     chiqdi = []
     ic.connect('commit-text', lambda _ic, matn: chiqdi.append(matn.get_text()))
+    xossalar = {}
+
+    def royxatga_ol(_ic, royxat):
+        xossalar.clear()
+        i = 0
+        while (x := royxat.get(i)) is not None:
+            xossalar[x.get_key()] = x.get_state()
+            i += 1
+    ic.connect('register-properties', royxatga_ol)
     ic.focus_in()
 
     xato = 0
@@ -100,6 +120,25 @@ def sinovlar(bus):
         belgi = '✓' if natija == kutilgan else '✗'
         xato += natija != kutilgan
         print(f'{belgi} {dvigatel:13} {yubor!r:22} → {natija!r}' + ('' if natija == kutilgan else f'  (kutilgan {kutilgan!r})'))
+    # Panel menyusidagi toggle: «Eski lotindan o'girish» o'chirilsa, sh o'zgarmay qoladi
+    bus.set_global_engine('ozbek-lotin')
+    aylan(40)
+    togri = {'tugmalar', 'lotin', 'sozlamalar'} <= set(xossalar)
+    xato += not togri
+    print(f"{'✓' if togri else '✗'} panel menyusi «öz»: {', '.join(xossalar) or 'bo`sh'}")
+    ic.property_activate('lotin', IBus.PropState.UNCHECKED)
+    aylan(40)
+    chiqdi.clear()
+    for belgi in 'shahar':
+        if not ic.process_key_event(IBus.unicode_to_keyval(belgi), 0, 0):
+            chiqdi.append(belgi)
+        aylan(2)
+    ic.reset()
+    aylan()
+    natija = ''.join(chiqdi)
+    togri = natija == 'shahar'
+    xato += not togri
+    print(f"{'✓' if togri else '✗'} panel toggle «lotin» o'chiq   'shahar'               → {natija!r}")
     ic.focus_out()
     return xato
 

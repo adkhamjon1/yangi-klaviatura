@@ -15,7 +15,8 @@ klaviaturadan qidirish shart emas.
 | **o'z** | Eski lotinda yozish kerak bo'lganda | Hozirgi alifbo (o', g', sh, ch) o'zgarishsiz yoziladi; apostrof odatdagidek ' tugmasida |
 | **ўз** | Kirillcha yozuvchilar | Odatdagi o'zbek kirill klaviaturasida yoziladi, matn yangi lotinda chiqadi |
 
-Rejimlar Super+Probel bilan almashtiriladi.
+Rejimlar Super+Probel bilan almashtiriladi. Yuqori paneldagi til belgisi bosilganda
+o'sha rejimning toggle'lari va «Sozlamalar…» bandi chiqadi. Sozlamalar oynasi Super+K bilan ham ochiladi.
 
 ### Tugmalar («öz»)
 
@@ -69,6 +70,19 @@ belgilar (w, c, [, ]) ham ishlaydi.
 - Faqat tugmalar sxemasi, `sudo`'siz: `bash linux/ornat.sh --faqat-sxema`.
 - Olib tashlash: `bash linux/olib-tashla.sh`.
 - Dvigatel xatolari `~/.cache/yangi-klaviatura/xato.log` ga yoziladi.
+
+### IBus'ga ulanmaydigan dasturlar
+
+O'girish IBus orqali ishlaydi, W/C/[/] tugmalari esa klaviatura sxemasida turadi. Snap'dagi VS Code
+kabi ba'zi Electron dasturlarida IBus moduli bo'lmaydi: ularda yangi harflar tugmalardan chiqadi,
+lekin sh, ch, o', g' o'girilmaydi. Bunday dastur XIM orqali ulanadi:
+
+```bash
+env GTK_IM_MODULE=xim XMODIFIERS=@im=ibus /snap/bin/code
+```
+
+Doimiy qilish uchun dasturning `.desktop` yorlig'i `~/.local/share/applications/` ga nusxalanadi
+va `Exec=` qatori boshiga `env GTK_IM_MODULE=xim XMODIFIERS=@im=ibus` qo'shiladi.
 
 ## Matnni o'girish
 

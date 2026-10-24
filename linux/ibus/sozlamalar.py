@@ -173,9 +173,13 @@ class Oyna(Adw.ApplicationWindow):
             yorliq.add_css_class('rejim-belgi')
             qator.add_prefix(yorliq)
             guruh.add(qator)
-        almash = Adw.ActionRow(title='Rejimni almashtirish', subtitle='Panelda tanlash ham mumkin')
-        almash.add_suffix(Adw.ShortcutLabel(accelerator='<Super>space', valign=Gtk.Align.CENTER))
-        guruh.add(almash)
+        for nom, tavsif, tugma in (
+            ('Rejimni almashtirish', 'Panelda tanlash ham mumkin', '<Super>space'),
+            ('Shu oynani ochish', "Panel menyusida toggle'lar ham bor", '<Super>k'),
+        ):
+            qator = Adw.ActionRow(title=nom, subtitle=tavsif)
+            qator.add_suffix(Adw.ShortcutLabel(accelerator=tugma, valign=Gtk.Align.CENTER))
+            guruh.add(qator)
         tugma = Adw.ButtonRow(title='Til sozlamalarini ochish', end_icon_name='go-next-symbolic')
         tugma.connect('activated', lambda *_: subprocess.Popen(['gnome-control-center', 'keyboard']))
         guruh.add(tugma)
