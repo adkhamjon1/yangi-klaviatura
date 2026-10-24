@@ -13,10 +13,10 @@ klaviaturadan qidirish shart emas.
 |---|---|---|
 | **öz** | Lotincha yozuvchilar | W, C, [, ] tugmalarida yangi harflar turadi; eski yozuvdagi sh, ch, o', g' ham o'zi yangi harfga aylanadi |
 | **o'z** | Eski lotinda yozish kerak bo'lganda | Hozirgi alifbo (o', g', sh, ch) o'zgarishsiz yoziladi; apostrof odatdagidek ' tugmasida |
-| **ўз** | Kirillcha yozuvchilar | Odatdagi o'zbek kirill klaviaturasida yoziladi, matn yangi lotinda chiqadi |
+| **ўз** | Kirillcha yozuvchilar | Odatdagi o'zbek kirill klaviaturasida yoziladi, matn yangi lotinda chiqadi; o'girish o'chirilsa oddiy kirillcha yoziladi |
 
-Rejimlar Super+Probel bilan almashtiriladi. Yuqori paneldagi til belgisi bosilganda
-o'sha rejimning toggle'lari va «Sozlamalar…» bandi chiqadi. Sozlamalar oynasi Super+K bilan ham ochiladi.
+Bir vaqtda bitta rejim ishlaydi, rejim Super+Probel bilan almashtiriladi. Har rejimning
+sozlamasi faqat o'sha rejimga tegishli.
 
 ### Tugmalar («öz»)
 
@@ -29,47 +29,78 @@ o'sha rejimning toggle'lari va «Sozlamalar…» bandi chiqadi. Sozlamalar oynas
 
 O'zbek alifbosida W va C harflari yo'q, [ va ] esa matnda kam uchraydi, shuning uchun
 yangi harflar shu tugmalarga qo'yilgan. Asl belgilar o'ng Alt (AltGr) bilan yoziladi.
-Qolgan tugmalar inglizcha (US) klaviaturadagidek ishlaydi.
+Havola yoki email ichida W va C o'z harfini beradi (www., info@c…).
 
 ### O'girish
 
 | Yozilgani | Chiqadigani |
 |---|---|
 | shahar, choy, o'zbek, g'isht | şahar, çoy, özbek, ğişt |
-| SHAHAR, O'zbekiston | ŞAHAR, Özbekiston |
+| SHAHAR, O'zbekiston, AQSH | ŞAHAR, Özbekiston, AQŞ |
 | Is'hoq (s va h alohida) | Ishoq |
 | ma'no, san'at (tutuq belgisi) | ma'no, san'at |
 | Ўзбекистон, шаҳар, ўғил | Özbekiston, şahar, öğil |
 | ер, поезд, цирк, лицей | yer, poyezd, sirk, litsey |
 
-Hali qaror kutayotgan harf (masalan «s» dan keyin «h» kelishi mumkin) tagiga chizilgan
-holda ko'rinadi va keyingi tugma bilan tasdiqlanadi.
+### Aqlli o'girish
+
+Har so'z tugaganda (bo'shliq, Enter, Tab) tekshiriladi:
+
+- **Havola, email va qisqartma o'zgarmaydi:** www.shifo.uz, info@choy.uz, @nom, ch1, TSH, CH-III.
+- **O'zbekchada yo'q harfli so'z o'zgarmaydi:** w, h siz c, ö, ü… (Schwann, Cochrane, Washington, Pöschl).
+- **Xorijiy so'zlar lug'ati:** Chrome, Shell, CHARGE, Shrapnell, cholesteatoma, tracheostomy va
+  jami 184 ta so'z asliga qaytadi. «öz» da C tugmasi bilan yozilgan «Çrome» ham taniladi.
+  Chiziqcha bilan yozilgan nom qismlab tekshiriladi: C-uchli → C-uçli, Arnold-Chiari o'zgarmaydi.
+- **Backspace bilan qaytarish:** so'zdan keyin darhol bosilgan Backspace so'zni eski holiga qaytaradi
+  va uni foydalanuvchi lug'atiga yozadi. Keyingi safar bu so'z o'girilmaydi.
+- **Parol va email maydonida** o'girish doim o'chiq bo'ladi, terminalda esa sozlamaga ko'ra.
+
+Dastur atrofdagi matnni bersa (GNOME'dagi ko'pchilik dasturlar), harf darhol yoziladi va
+o'girish joyida bo'ladi. Qolgan dasturlarda qaror kutayotgan harf (masalan «s» dan keyin
+«h» kelishi mumkin) tagiga chizilib turadi.
+
+### Aniqlik
+
+O'girgich ENT Medical saytining 277 ta mavzusida (165 824 qator) sinalgan va saytning
+mustaqil o'giruvchisi bilan so'zma-so'z solishtirilgan. sh, ch, o' yoki g' bor 449 533 so'zda
+natija 99,78 % mos keldi. Farq qilgan 971 holatning hammasi qo'lda ko'rib chiqildi:
+346 tasi matn belgilash qoldig'i, qolganlarida bu o'girgichning javobi to'g'ri bo'lib chiqdi.
 
 ### Sozlamalar
 
-«Özbek klaviaturasi» ilovasida har funksiya alohida yoqiladi va o'chiriladi:
-tugmalardagi harflar, eski lotin va kirill yozuvidan o'girish, `s'h → sh`, tutuq belgisi `ʼ`,
-terminalda o'girmaslik, «o'z» rejimida rasmiy oʻ va gʻ belgisi (U+02BB). Ilovada matnni sinab ko'rish maydoni ham bor. Parol maydonida
-o'girish doim o'chiq bo'ladi.
+«Özbek klaviaturasi» ilovasida har funksiya alohida yoqiladi va o'chiriladi. Ilova Super+K
+bilan yoki yuqori paneldagi til menyusidan ochiladi. Panel menyusining o'zida ham o'sha
+rejimning asosiy toggle'lari turadi. Ilovada shaxsiy lug'at va matnni sinab ko'rish maydoni bor.
 
 ## Linux
 
-Ubuntu 26.04 (GNOME 50, Wayland, IBus) da sinalgan. Kerakli paketlar: Python 3, PyGObject,
-IBus, GTK 4 va libadwaita 1.6 yoki undan yangisi (Ubuntu'da odatda o'rnatilgan bo'ladi).
+Ubuntu 26.04 (GNOME 50, Wayland, IBus) da sinalgan. Ubuntu 24.04 va undan yangi tizimda ishlashi
+kerak (libadwaita 1.5 dan boshlab).
+
+### Paket bilan
+
+```bash
+sudo apt install ./yangi-klaviatura_1.0.0_all.deb
+```
+
+O'rnatilgach «Özbek klaviaturasi» ilovasi ochiladi va tepadagi «Yoqish» tugmasi bosiladi:
+rejimlar til ro'yxatiga qo'shiladi, Super+K qo'yiladi. Tizimdan bir marta chiqib qayta
+kirilgandan keyin o'ng Alt bilan asl belgilar (w, c, [, ]) ham ishlaydi.
+
+Olib tashlash: `sudo apt remove yangi-klaviatura`.
+
+### Manbadan
 
 ```bash
 git clone https://github.com/adkhamjon1/yangi-klaviatura
 cd yangi-klaviatura
-bash linux/ornat.sh
+bash linux/ornat.sh                # /usr/local ga, sudo so'raydi
+bash linux/ornat.sh --faqat-sxema  # faqat W/C/[/] sxemasi, sudo'siz
+bash linux/olib-tashla.sh
 ```
 
-Skript dvigatelni tizimga qo'yish uchun `sudo` parolini so'raydi. Rejimlar darhol panelda
-paydo bo'ladi. Tizimdan bir marta chiqib qayta kirilgandan keyin o'ng Alt bilan asl
-belgilar (w, c, [, ]) ham ishlaydi.
-
-- Faqat tugmalar sxemasi, `sudo`'siz: `bash linux/ornat.sh --faqat-sxema`.
-- Olib tashlash: `bash linux/olib-tashla.sh`.
-- Dvigatel xatolari `~/.cache/yangi-klaviatura/xato.log` ga yoziladi.
+Paket va manbadan o'rnatish bir vaqtda ishlatilmaydi: ikkalasi bitta IBus komponentini yozadi.
+Dvigatel xatolari `~/.cache/yangi-klaviatura/xato.log` ga yoziladi.
 
 ### IBus'ga ulanmaydigan dasturlar
 
@@ -88,7 +119,7 @@ muhitni meros oladi. XIM ko'prigi `ibus-x11` ishlab turishi shart.
 
 ## Matnni o'girish
 
-Tayyor matn ham buyruq qatorida yangi yozuvga o'giriladi:
+Tayyor matn ham buyruq qatorida yangi yozuvga o'giriladi (istisnolar va lug'at bilan):
 
 ```bash
 python3 linux/ibus/ogirgich.py "O'zbekiston — Ўзбекистон"
@@ -108,5 +139,6 @@ qayta yasaladi (Node.js 18 yoki undan yangisi kerak):
 node qur.mjs                                      # linux/ dagi sxema va xarita fayllari
 node qur.mjs --check                              # fayllar xaritaga mosligi
 python3 -m unittest linux/ibus/test_ogirgich.py   # o'girish qoidalari
-python3 linux/ibus/sinov_ibus.py                  # o'rnatilgan dvigatelni IBus orqali sinash
+python3 linux/ibus/sinov_ibus.py                  # o'rnatilgan dvigatel, alohida IBus nusxasida
+bash linux/deb.sh                                 # dist/yangi-klaviatura_<versiya>_all.deb
 ```
