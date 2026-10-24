@@ -1,0 +1,32 @@
+// Ikonkalar va versiya ma'lumoti. windows/ikonka.py ikonkalarni yasaydi.
+#include <winver.h>
+#include "resurs.h"
+
+IKONKA_ILOVA ICON "ikonka/ilova.ico"
+IKONKA_OZ ICON "ikonka/oz.ico"
+IKONKA_ESKI ICON "ikonka/eski.ico"
+IKONKA_KIRILL ICON "ikonka/kirill.ico"
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION VERSIYA_RAQAM
+PRODUCTVERSION VERSIYA_RAQAM
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_DLL
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName", "adkhamjon1"
+      VALUE "FileDescription", "Özbek klaviaturasi — yangi yozuv"
+      VALUE "FileVersion", VERSIYA_MATN
+      VALUE "ProductName", "Özbek klaviaturasi"
+      VALUE "ProductVersion", VERSIYA_MATN
+      VALUE "LegalCopyright", "© 2026 adkhamjon1"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 1200
+  END
+END
