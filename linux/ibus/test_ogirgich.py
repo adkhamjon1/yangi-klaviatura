@@ -123,6 +123,17 @@ class Istisnolar(unittest.TestCase):
         lugat = Lugat(['shahar'])
         self.assertEqual(ogir('shahar шаҳар', lugat=lugat), 'shahar şahar')
 
+    def test_korpus_qoidalari(self):
+        for matn in ['Pöschl', 'Tröltsch', 'TSH', 'PTCH', 'CH-III', 'dishormonogenetik']:
+            self.assertEqual(ogir(matn), matn, matn)
+        self.assertEqual(ogir('AQSH SHAHAR'), 'AQŞ ŞAHAR')               # unlili katta harfli so'z o'giriladi
+        self.assertEqual(ogir('Arnold-Chiari', lugat=self.LUGAT), 'Arnold-Chiari')
+        self.assertEqual(ogir("og'izhalqum ToshPTI"), 'oğizhalqum ToşPTI')
+        self.assertEqual(ogir('C-uchli MR-shartli EChT/CRB'), 'C-uçli MR-şartli EÇT/CRB')
+        self.assertEqual(ogir('Bamford–Kowal–Bench Cheyne-Stokes', lugat=self.LUGAT), 'Bamford–Kowal–Bench Cheyne-Stokes')
+        self.assertEqual(ogir("o'n-o'n besh"), 'ön-ön beş')
+        self.assertEqual(ogir('Shy-Drager MACH-NC', lugat=self.LUGAT), 'Shy-Drager MACH-NC')
+
     def test_istisnolar_ochiq(self):
         self.assertEqual(ogir('www.shifo.uz', istisnolar=False), 'www.şifo.uz')
 

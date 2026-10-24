@@ -40,6 +40,10 @@ HAVOLA = re.compile(r'://|^www\.|@', re.I)
 DOMEN = re.compile(r'[A-Za-z]\.[A-Za-z]{2,}')
 HARF_RAQAM = re.compile(r'[A-Za-z]\d|\d[A-Za-z]')
 XORIJIY = re.compile(r'[wW]|[cC](?=[^hH])')
+NOTANISH = re.compile('[äöüßéèêëáàâïñøåæ]', re.I)       # eski o'zbek lotinida yo'q harf: Pöschl, Tröltsch
+DIS_H = re.compile(r'(?:^|[^a-z])dish(?:ormon|idro|armon)', re.I)  # dis + gormon: s va h alohida
+UNLI_HARF = re.compile('[AEIOUaeiou]')
+QISM_AJRATGICH = re.compile('([-/–])')
 TINISH = '.,;:!?"«»„“”()[]{}…—–*'
 KIRILL_HARF = re.compile('[\u0400-\u04ff]')
 LUGAT_FAYL = Path(__file__).with_name('lugat.txt')
@@ -50,15 +54,25 @@ def harfmi(c):
 
 
 def havolami(soz):
-    """Havola, email, @nom, domen yoki harf-raqamli so'z."""
-    return bool(HAVOLA.search(soz) or DOMEN.search(soz) or HARF_RAQAM.search(soz))
+    """Havola, email, @nom, domen, harf-raqamli yoki o'zbekchada yo'q harfli so'z."""
+    return bool(HAVOLA.search(soz) or DOMEN.search(soz) or HARF_RAQAM.search(soz) or NOTANISH.search(soz))
+
+
+def qisqartmami(soz):
+    """Unlisiz katta harfli qisqartma (TSH, PTCH, CH-III ning CH qismi)."""
+    for qism in re.split(r'[-/]', soz.strip(TINISH)):
+        if re.fullmatch('[A-Z]{2,}', qism) and not UNLI_HARF.search(qism):
+            return True
+    return False
 
 
 def xom_qolsinmi(soz, yakuniy=False):
-    """So'z o'girilmay qolishi kerakmi (lug'atsiz qoidalar)."""
+    """So'z o'girilmay qolishi kerakmi (lug'atsiz qoidalar). yakuniy — so'z tugagan."""
     if havolami(soz) or XORIJIY.search(soz):
         return True
-    return yakuniy and soz.rstrip(TINISH)[-1:] in ('c', 'C')
+    if not yakuniy:
+        return False
+    return soz.rstrip(TINISH)[-1:] in ('c', 'C') or qisqartmami(soz) or bool(DIS_H.search(soz))
 
 
 def _harf_holati(asl, namuna):
@@ -95,21 +109,27 @@ class Lugat:
         soz = token[bosh:oxir]
         if len(soz) < 2:
             return None
-        k = soz.lower()
-        asl = self.kalit.get(k)
-        if asl:
-            yangi = _harf_holati(asl, soz)
-        else:
-            yangi = None
-            # qo'shimchali shakl: Chromeda, Shellga (qisqa so'zda emas — bashorat ≠ bash+orat)
-            for n in range(len(k) - 1, max(4, len(k) - 6), -1):
-                asl = self.kalit.get(k[:n])
-                if asl and n >= 5:
-                    yangi = _harf_holati(asl, soz[:n]) + soz[n:]
-                    break
+        yangi = self._top(soz)
+        if yangi is None and '-' in soz:                    # Arnold-Chiari, four-channel
+            qismlar = [self._top(q) or q for q in soz.split('-')]
+            yangi = '-'.join(qismlar)
         if yangi is None or yangi == soz:
             return None
         return token[:bosh] + yangi + token[oxir:]
+
+    def _top(self, soz):
+        if len(soz) < 2:
+            return None
+        k = soz.lower()
+        asl = self.kalit.get(k)
+        if asl:
+            return _harf_holati(asl, soz)
+        # qo'shimchali shakl: Chromeda, Shellga (qisqa so'zda emas — bashorat ≠ bash+orat)
+        for n in range(len(k) - 1, max(4, len(k) - 6), -1):
+            asl = self.kalit.get(k[:n])
+            if asl and n >= 5:
+                return _harf_holati(asl, soz[:n]) + soz[n:]
+        return None
 
 
 def lugat_oqi(*fayllar):
@@ -163,7 +183,20 @@ class Ogirgich:
     def yakunla(self):
         """So'z tugadi: kutayotgan qism chiqadi, istisno bo'lsa so'z asliga qaytadi."""
         self.tugat()
-        if self.buzildi or not self.istisnolar or self.otkaz:
+        if self.buzildi or not self.istisnolar:
+            return
+        xom = self.token_xom
+        lotin_soz = not KIRILL_HARF.search(xom)
+        butun = self.lugat.tuzat(self.token_chiq) if self.lugat and lotin_soz else None
+        if butun:                                        # lug'atdagi butun nom: Shy-Drager, MACH-NC
+            self.token_chiq = butun
+            return
+        if QISM_AJRATGICH.search(xom.strip(TINISH)) and not havolami(self.token_tugma) and lotin_soz:
+            # C-uchli, MR-shartli, Arnold-Chiari: har qism alohida tekshiriladi
+            self.token_chiq = ''.join(q if QISM_AJRATGICH.fullmatch(q) else self._qism(q)
+                                      for q in QISM_AJRATGICH.split(xom))
+            return
+        if self.otkaz:
             return
         asl = self._asl_nusxa(yakuniy=True)
         if asl is not None:
@@ -172,6 +205,15 @@ class Ogirgich:
             tuzatilgan = self.lugat.tuzat(self.token_chiq)
             if tuzatilgan:
                 self.token_chiq = tuzatilgan
+
+    def _qism(self, qism):
+        """Chiziqcha bilan ajralgan bo'lak: istisno bo'lsa asli, aks holda o'girilgani."""
+        if not qism or xom_qolsinmi(qism, yakuniy=True):
+            return qism
+        og = Ogirgich(self.lotin, self.kirill, self.sh_ajrat, self.tutuq, istisnolar=False)
+        chiq = ''.join(og.qabul(c) for c in qism) + og.tugat()
+        tuzatilgan = self.lugat.tuzat(chiq) if self.lugat else None
+        return tuzatilgan or chiq
 
     # -- belgilar --
 
