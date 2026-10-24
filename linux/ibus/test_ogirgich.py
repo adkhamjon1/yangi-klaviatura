@@ -5,7 +5,7 @@ import sys
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from ogirgich import Ogirgich, ogir  # noqa: E402
+from ogirgich import LUGAT_FAYL, Lugat, Ogirgich, eski_yozuvda, lugat_oqi, ogir  # noqa: E402
 
 
 class Lotin(unittest.TestCase):
@@ -76,6 +76,85 @@ class Kirill(unittest.TestCase):
 
     def test_aralash(self):
         self.assertEqual(ogir("O'zbekiston — Ўзбекистон"), 'Özbekiston — Özbekiston')
+
+
+class Istisnolar(unittest.TestCase):
+    LUGAT = Lugat(lugat_oqi(LUGAT_FAYL))
+
+    def test_havola_email_raqam(self):
+        for matn in ['www.shifo.uz/chorak', 'https://choy.uz/shahar', 'info@choy.uz', '@shahar_uz',
+                     'shifo.uz', 'ch1', 'sh2']:
+            self.assertEqual(ogir(matn), matn, matn)
+        self.assertEqual(ogir('2-chi sinf'), '2-çi sinf')
+        self.assertEqual(ogir('#shahar'), '#şahar')
+
+    def test_xorijiy_harf(self):
+        for matn in ['Schwann', 'Cochrane', 'Washington', 'Sic']:
+            self.assertEqual(ogir(matn), matn, matn)
+        self.assertEqual(ogir('Schwann hujayrasi sharhi'), 'Schwann hujayrasi şarhi')
+
+    def test_lugat(self):
+        for matn, kutilgan in [
+            ('Google Chrome va Shell', 'Google Chrome va Shell'),
+            ('CHARGE sindromi', 'CHARGE sindromi'),
+            ('Chromeda ochildi', 'Chromeda ochildi'.replace('ochildi', 'oçildi')),
+            ('(Shell),', '(Shell),'),
+            ('CHROME', 'CHROME'),
+            ("O'Brien", "O'Brien"),
+            ('Escherichia coli', 'Escherichia coli'),
+        ]:
+            self.assertEqual(ogir(matn, lugat=self.LUGAT), kutilgan, matn)
+        self.assertEqual(ogir('Chrome'), 'Çrome')                    # lug'atsiz o'giriladi
+
+    def test_lugat_qisqa_soz_qoshimchada_ishlamaydi(self):
+        lugat = Lugat(['bash', 'push'])
+        self.assertEqual(ogir('bash', lugat=lugat), 'bash')
+        self.assertEqual(ogir('bashorat pushti', lugat=lugat), 'başorat puşti')
+
+    def test_togri_tugma_bilan_yozilgan(self):
+        """«öz» da C tugmasi ç beradi: Çrome ham lug'atdan taniladi."""
+        og = Ogirgich(lugat=self.LUGAT)
+        for c in 'Çrome':
+            og.qabul(c)
+        og.yakunla()
+        self.assertEqual(og.token_chiq, 'Chrome')
+
+    def test_lugat_kirillga_tegmaydi(self):
+        lugat = Lugat(['shahar'])
+        self.assertEqual(ogir('shahar шаҳар', lugat=lugat), 'shahar şahar')
+
+    def test_istisnolar_ochiq(self):
+        self.assertEqual(ogir('www.shifo.uz', istisnolar=False), 'www.şifo.uz')
+
+    def test_kirill_raqam(self):
+        self.assertEqual(ogir('5А синф'), '5A sinf')
+
+    def test_ekran_oqimi(self):
+        """Dvigatel «darhol» rejimida ekranni og.ekran() ga tenglashtiradi."""
+        og = Ogirgich()
+        ekranlar = []
+        for c in 'info@ch':
+            og.qabul(c)
+            ekranlar.append(og.ekran())
+        self.assertEqual(ekranlar, ['i', 'in', 'inf', 'info', 'info@', 'info@c', 'info@ch'])
+        og = Ogirgich()
+        for c in 'shifo.uz':
+            og.qabul(c)
+        self.assertEqual(og.ekran(), 'shifo.uz')            # .uz kelganda so'z asliga qaytdi
+
+
+class EskiYozuvda(unittest.TestCase):
+    def test_teskari(self):
+        self.assertEqual(eski_yozuvda('Çrome'), 'Chrome')
+        self.assertEqual(eski_yozuvda('ŞAHAR'), 'SHAHAR')
+        self.assertEqual(eski_yozuvda('Özbekiston'), "O'zbekiston")
+        self.assertEqual(eski_yozuvda('öğil'), "o'g'il")
+
+    def test_altgr_kutishni_chiqaradi(self):
+        og = Ogirgich()
+        og.qabul('s')
+        self.assertEqual(og.xom('w'), 'sw')
+        self.assertEqual(og.ekran(), 'sw')
 
 
 class Oqim(unittest.TestCase):

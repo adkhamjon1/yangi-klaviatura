@@ -5,9 +5,16 @@ Yangi harflar Ö, Ğ, Ş va Ç (21.10.2026 qonuni, 22.04.2027 dan kuchga kiradi)
 Ogirgich belgilarni birma-bir oladi: IBus dvigateli har tugmani, matn
 o'giruvchi esa butun matnni shu bitta sinf orqali o'tkazadi.
 
+Matn so'z (bo'shliqqacha bo'lgan bo'lak) bo'yicha kuzatiladi. Havola, email,
+harf-raqamli so'z va o'zbekchada yo'q harfli so'z (w, yolg'iz c) o'girilmaydi;
+xorijiy so'zlar lug'ati (Chrome, Shell, CHARGE) so'z tugaganda tiklanadi.
+
     python3 ogirgich.py "O'zbekiston, Ўзбекистон"   →   Özbekiston, Özbekiston
+    python3 ogirgich.py < eski.txt > yangi.txt
 """
+import re
 import sys
+from pathlib import Path
 
 APOSTROF = frozenset("'`‘’ʻʼ")
 TUTUQ = 'ʼ'                        # U+02BC
@@ -27,23 +34,168 @@ HARF_H = {'s': 'ş', 'S': 'Ş', 'c': 'ç', 'C': 'Ç'}
 HARF_APOSTROF = {'o': 'ö', 'O': 'Ö', 'g': 'ğ', 'G': 'Ğ'}
 KATTA_KIRILL = '\x00'               # kutish belgisi: Ё → «Yo» yoki «YO» keyingi harfga qarab
 
+# So'z shu ko'rinishda bo'lsa o'girilmaydi: havola, email, @nom, harf-raqamli (ch1),
+# domen (shifo.uz) va o'zbekchada yo'q harf — w yoki h siz c (Schwann, Cochrane)
+HAVOLA = re.compile(r'://|^www\.|@', re.I)
+DOMEN = re.compile(r'[A-Za-z]\.[A-Za-z]{2,}')
+HARF_RAQAM = re.compile(r'[A-Za-z]\d|\d[A-Za-z]')
+XORIJIY = re.compile(r'[wW]|[cC](?=[^hH])')
+TINISH = '.,;:!?"«»„“”()[]{}…—–*'
+KIRILL_HARF = re.compile('[\u0400-\u04ff]')
+LUGAT_FAYL = Path(__file__).with_name('lugat.txt')
+
 
 def harfmi(c):
     return bool(c) and c.isalpha() and c not in APOSTROF
 
 
+def havolami(soz):
+    """Havola, email, @nom, domen yoki harf-raqamli so'z."""
+    return bool(HAVOLA.search(soz) or DOMEN.search(soz) or HARF_RAQAM.search(soz))
+
+
+def xom_qolsinmi(soz, yakuniy=False):
+    """So'z o'girilmay qolishi kerakmi (lug'atsiz qoidalar)."""
+    if havolami(soz) or XORIJIY.search(soz):
+        return True
+    return yakuniy and soz.rstrip(TINISH)[-1:] in ('c', 'C')
+
+
+def _harf_holati(asl, namuna):
+    """Lug'atdagi so'zga yozilgan so'zning harf holatini beradi (CHROME, Chrome, chrome)."""
+    if len(namuna) > 1 and namuna.isupper():
+        return asl.upper()
+    if namuna[:1].isupper():
+        return asl[:1].upper() + asl[1:]
+    return asl[:1].lower() + asl[1:]
+
+
+class Lugat:
+    """Xorijiy so'zlar: o'girilgan ko'rinishi (Çrome) ham, asli (chrome) ham taniladi."""
+
+    def __init__(self, sozlar=()):
+        self.kalit = {}
+        for soz in sozlar:
+            self.qosh(soz)
+
+    def qosh(self, soz):
+        soz = soz.strip()
+        if len(soz) < 2:
+            return
+        for k in (soz.lower(), sof_ogir(soz).lower()):
+            self.kalit[k] = soz
+
+    def __len__(self):
+        return len({*self.kalit.values()})
+
+    def tuzat(self, token):
+        """Token ichidagi lug'at so'zini asliga qaytaradi; o'zgarmasa None."""
+        bosh = len(token) - len(token.lstrip(TINISH))
+        oxir = len(token.rstrip(TINISH))
+        soz = token[bosh:oxir]
+        if len(soz) < 2:
+            return None
+        k = soz.lower()
+        asl = self.kalit.get(k)
+        if asl:
+            yangi = _harf_holati(asl, soz)
+        else:
+            yangi = None
+            # qo'shimchali shakl: Chromeda, Shellga (qisqa so'zda emas — bashorat ≠ bash+orat)
+            for n in range(len(k) - 1, max(4, len(k) - 6), -1):
+                asl = self.kalit.get(k[:n])
+                if asl and n >= 5:
+                    yangi = _harf_holati(asl, soz[:n]) + soz[n:]
+                    break
+        if yangi is None or yangi == soz:
+            return None
+        return token[:bosh] + yangi + token[oxir:]
+
+
+def lugat_oqi(*fayllar):
+    """Lug'at fayllaridan so'zlar (har qatorda bitta, # dan keyingisi izoh)."""
+    sozlar = []
+    for fayl in fayllar:
+        try:
+            for qator in Path(fayl).read_text(encoding='utf-8').splitlines():
+                qator = qator.split('#', 1)[0].strip()
+                if qator:
+                    sozlar.append(qator)
+        except OSError:
+            pass
+    return sozlar
+
+
 class Ogirgich:
-    def __init__(self, lotin=True, kirill=True, sh_ajrat=True, tutuq=False):
+    def __init__(self, lotin=True, kirill=True, sh_ajrat=True, tutuq=False, istisnolar=True, lugat=None):
         self.lotin = lotin          # sh → ş, ch → ç, o' → ö, g' → ğ
         self.kirill = kirill        # kirill harflari → yangi lotin
         self.sh_ajrat = sh_ajrat    # s'h → sh (Is'hoq → Ishoq)
         self.tutuq = tutuq          # so'z ichidagi ' → ʼ
+        self.istisnolar = istisnolar  # havola, email, xorijiy so'z o'girilmaydi
+        self.lugat = lugat          # Lugat yoki None
         self.kutish = ''            # hali qaror kutayotgan qism
         self.oldingi = ''           # oxirgi chiqqan belgi; '' — boshlanish, None — noma'lum
         self._yumshoq = False       # ь dan keyin: е → ye
+        self._token_yangi()
 
-    def qabul(self, c):
-        """Bitta belgini oladi va tasdiqlangan matnni qaytaradi."""
+    # -- so'z (token) holati --
+
+    def _token_yangi(self):
+        self.token_xom = ''         # yozilgan belgilar (to'g'ri tugmadagi ş, ç ham shu yerda)
+        self.token_tugma = ''       # tugmaning asl belgisi bilan (W tugmasidagi ş → w): www. ni tanish uchun
+        self.token_chiq = ''        # tasdiqlangan natija (kutayotgan qismsiz)
+        self.otkaz = False          # so'z o'girilmaydigan deb topildi
+        self.buzildi = False        # so'z ichida o'chirildi — orqaga tuzatish qilinmaydi
+
+    def ekran(self):
+        """Joriy so'z ekranda qanday turishi kerak (kutayotgan qism bilan)."""
+        return self.token_chiq + self.korinish()
+
+    def _asl_nusxa(self, yakuniy=False):
+        """So'z o'girilmasligi kerak bo'lsa — uning asl ko'rinishi, aks holda None."""
+        if xom_qolsinmi(self.token_xom, yakuniy):
+            return self.token_xom
+        if havolami(self.token_tugma):
+            return self.token_tugma
+        return None
+
+    def yakunla(self):
+        """So'z tugadi: kutayotgan qism chiqadi, istisno bo'lsa so'z asliga qaytadi."""
+        self.tugat()
+        if self.buzildi or not self.istisnolar or self.otkaz:
+            return
+        asl = self._asl_nusxa(yakuniy=True)
+        if asl is not None:
+            self.token_chiq = asl
+        elif self.lugat and not KIRILL_HARF.search(self.token_xom):     # lug'at — lotincha yozilgan so'zga
+            tuzatilgan = self.lugat.tuzat(self.token_chiq)
+            if tuzatilgan:
+                self.token_chiq = tuzatilgan
+
+    # -- belgilar --
+
+    def qabul(self, c, tugma=None):
+        """Bitta belgini oladi va tasdiqlangan matnni qaytaradi.
+
+        tugma — to'g'ri tugmadagi yangi harfning asl belgisi (W tugmasidagi ş uchun 'w'):
+        havola yoki email ichida shu asl belgi yoziladi.
+        """
+        if c.isspace():
+            matn = self.tugat() + self._chiqar(c)
+            self._token_yangi()
+            return matn
+        self.token_xom += c
+        self.token_tugma += tugma or c
+        if self.istisnolar and not self.otkaz:
+            asl = self._asl_nusxa()
+            if asl is not None:
+                self.otkaz = True
+                matn = self.tugat() + self._chiqar(tugma or c)
+                self.token_chiq = asl                  # so'z boshidan asliga qaytadi
+                return matn
+        if self.otkaz:
+            return self._chiqar(tugma or c)
         if not self.kutish:
             return self._yangi(c)
         natija = self._davom(c)
@@ -62,25 +214,41 @@ class Ogirgich:
         return self._chiqar(k)
 
     def korinish(self):
-        """Kutayotgan qism ekranda qanday ko'rinadi (tagiga chizilgan matn)."""
+        """Kutayotgan qism ekranda qanday ko'rinadi."""
         k = self.kutish
         if k and k[0] == KATTA_KIRILL:
             return k[1:].capitalize()
         return k
 
     def orqaga(self):
-        """Backspace: kutayotgan qismning oxirgi belgisini o'chiradi."""
+        """Backspace kutayotgan qismda: uning oxirgi belgisi o'chadi."""
         k = self.kutish
         self.kutish = '' if not k or k[0] == KATTA_KIRILL else k[:-1]
+        self.token_xom = self.token_xom[:-1]
+
+    def ochirildi(self):
+        """Backspace tasdiqlangan matnda (ilova o'zi o'chirdi): so'z endi aniq kuzatilmaydi."""
+        self.token_chiq = self.token_chiq[:-1]
+        self.token_xom = self.token_xom[:-1]
+        self.buzildi = True
 
     def xom(self, c):
         """Belgini o'girmasdan chiqaradi (AltGr bilan yozilgan asl belgi)."""
-        return self._chiqar(c)
+        matn = self.tugat()
+        self.token_xom += c
+        self.token_tugma += c
+        matn += self._chiqar(c)
+        if self.istisnolar and not self.otkaz and xom_qolsinmi(self.token_xom):
+            self.otkaz = True
+            self.token_chiq = self.token_xom
+        return matn
 
     def unut(self):
-        """Kursor boshqa joyga o'tdi: oldingi belgi noma'lum."""
+        """Kursor boshqa joyga o'tdi: oldingi belgi va joriy so'z noma'lum."""
+        self.kutish = ''
         self.oldingi = None
         self._yumshoq = False
+        self._token_yangi()
 
     # -- ichki qoidalar --
 
@@ -88,6 +256,7 @@ class Ogirgich:
         if matn:
             self.oldingi = matn[-1]
             self._yumshoq = False
+            self.token_chiq += matn
         return matn
 
     def _yangi(self, c):
@@ -151,12 +320,48 @@ class Ogirgich:
         return ''
 
 
-def ogir(matn, **sozlama):
-    """Butun matnni yangi yozuvga o'giradi."""
-    og = Ogirgich(**sozlama)
+ESKI_HARF = {'ş': 'sh', 'ç': 'ch', 'ö': "o'", 'ğ': "g'"}
+
+
+def eski_yozuvda(matn):
+    """Yangi harflar eski yozuvga: ş → sh, Ç → Ch (keyingi harf katta bo'lsa CH)."""
+    natija = []
+    for i, c in enumerate(matn):
+        past = c.lower()
+        if past not in ESKI_HARF:
+            natija.append(c)
+            continue
+        eski = ESKI_HARF[past]
+        if c != past:
+            eski = eski.upper() if matn[i + 1:i + 2].isupper() else eski[0].upper() + eski[1:]
+        natija.append(eski)
+    return ''.join(natija)
+
+
+def sof_ogir(matn):
+    """Istisnosiz, toza qoidalar bilan o'giradi (lug'at kalitlari uchun)."""
+    og = Ogirgich(istisnolar=False)
     return ''.join(og.qabul(c) for c in matn) + og.tugat()
 
 
+def ogir(matn, **sozlama):
+    """Butun matnni yangi yozuvga o'giradi (so'zma-so'z, istisnolar bilan)."""
+    og = Ogirgich(**sozlama)
+    qismlar = []
+    for c in matn:
+        if c.isspace():
+            og.yakunla()
+            qismlar.append(og.token_chiq)
+            og.qabul(c)
+            qismlar.append(c)
+        else:
+            og.qabul(c)
+    og.yakunla()
+    qismlar.append(og.token_chiq)
+    return ''.join(qismlar)
+
+
 if __name__ == '__main__':
+    lugat = Lugat(lugat_oqi(LUGAT_FAYL))
     matn = ' '.join(sys.argv[1:]) if len(sys.argv) > 1 else sys.stdin.read()
-    sys.stdout.write(ogir(matn) + ('\n' if len(sys.argv) > 1 else ''))
+    sys.stdout.write(ogir(matn, lugat=lugat) + ('\n' if len(sys.argv) > 1 else ''))

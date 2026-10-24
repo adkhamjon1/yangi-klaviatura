@@ -8,7 +8,7 @@ cd "$(dirname "$0")"
 TIZIM=/usr/local/share/yangi-klaviatura
 ILOVA=io.github.adkhamjon1.YangiKlaviatura
 KOMPONENT=/usr/share/ibus/component/ozbek.xml
-FAYLLAR=(ogirgich.py sozlama.py xarita.py engine.py sozlamalar.py)
+FAYLLAR=(ogirgich.py sozlama.py xarita.py lugat.txt engine.py sozlamalar.py)
 
 if [ "${1:-}" = --tizim ]; then              # root sifatida: dvigatel, oyna, ikonka
   install -d "$TIZIM"
@@ -56,7 +56,7 @@ if [ -n "${DISPLAY:-}" ] && [ -x /usr/libexec/ibus-x11 ] && ! pgrep -x ibus-x11 
 fi
 
 # 3. GNOME til ro'yxati: oddiy sxema o'rniga IBus rejimlari
-read -r eski kirill < <(python3 -c 'import sys; sys.path.insert(0, "ibus"); import sozlama; s = sozlama.oqi(); print(int(s["eski"]), int(s["kirill"]))')
+read -r eski kirill < <(python3 -c 'import sys; sys.path.insert(0, "ibus"); import sozlama; s = sozlama.oqi(); print(int(s["eski"]), int(s["kirill_rejim"]))')
 qosh=(-xkb:ozbek +ibus:ozbek-lotin)
 [ "$eski" = 1 ] && qosh+=(+ibus:ozbek-eski)
 [ "$kirill" = 1 ] && qosh+=(+ibus:ozbek-kirill)

@@ -139,7 +139,82 @@ def sinovlar(bus):
     togri = natija == 'shahar'
     xato += not togri
     print(f"{'✓' if togri else '✗'} panel toggle «lotin» o'chiq   'shahar'               → {natija!r}")
+    ic.property_activate('lotin', IBus.PropState.CHECKED)
+    aylan(40)
+    xato += darhol_sinovlari(bus, ic, chiqdi)
     ic.focus_out()
+    return xato
+
+
+# «darhol» rejimi: ilova atrofdagi matnni beradi; '\b' — Backspace
+DARHOL = [
+    ('ozbek-lotin', 'shahar ', 'şahar '),
+    ('ozbek-lotin', "O'zbekiston Is'hoq ", 'Özbekiston Ishoq '),
+    ('ozbek-lotin', 'Chrome va Shell ', 'Chrome va Shell '),
+    ('ozbek-lotin', 'Çrome ', 'Chrome '),
+    ('ozbek-lotin', 'www.shifo.uz/chorak ', 'www.shifo.uz/chorak '),
+    ('ozbek-lotin', 'info@choy.uz ', 'info@choy.uz '),
+    ('ozbek-lotin', 's\b', ''),
+    ('ozbek-lotin', 'shahar \b', 'shahar'),            # so'zdan keyin Backspace — eski holi
+    ('ozbek-lotin', 'shahar ', 'shahar '),              # ... va lug'atga yozildi
+    ('ozbek-kirill', 'шаҳар ', 'şahar '),
+    ('ozbek-kirill', 'Ёз ', 'Yoz '),
+]
+
+
+def darhol_sinovlari(bus, ic, chiqdi):
+    bufer = {'matn': '', 'kursor': 0}
+
+    def yangila():
+        ic.set_surrounding_text(IBus.Text.new_from_string(bufer['matn']), bufer['kursor'], bufer['kursor'])
+
+    def qosh(matn):
+        m, k = bufer['matn'], bufer['kursor']
+        bufer['matn'], bufer['kursor'] = m[:k] + matn + m[k:], k + len(matn)
+        yangila()
+
+    def ochir(siljish, soni):
+        m, k = bufer['matn'], bufer['kursor']
+        bosh = max(0, k + siljish)
+        bufer['matn'], bufer['kursor'] = m[:bosh] + m[bosh + soni:], bosh
+        yangila()
+
+    ulanish = [ic.connect('commit-text', lambda _ic, t: qosh(t.get_text())),
+               ic.connect('delete-surrounding-text', lambda _ic, s, n: ochir(s, n))]
+    ic.set_capabilities(IBus.Capabilite.PREEDIT_TEXT | IBus.Capabilite.FOCUS
+                        | IBus.Capabilite.SURROUNDING_TEXT | IBus.Capabilite.PROPERTY)
+    xato = 0
+    for dvigatel, yubor, kutilgan in DARHOL:
+        bus.set_global_engine(dvigatel)
+        for _ in range(100):
+            aylan(2)
+            joriy = ic.get_engine()
+            if joriy and joriy.get_name() == dvigatel:
+                break
+        ic.set_content_type(IBus.InputPurpose.FREE_FORM, 0)
+        ic.reset()
+        aylan()
+        bufer['matn'], bufer['kursor'] = '', 0
+        yangila()
+        aylan()
+        for belgi in yubor:
+            kv = IBus.KEY_BackSpace if belgi == '\b' else IBus.unicode_to_keyval(belgi)
+            if not ic.process_key_event(kv, 0, 0):
+                aylan(2)
+                if belgi == '\b':
+                    ochir(-1, 1)
+                else:
+                    qosh(belgi)                 # dvigatel o'tkazib yubordi — ilova o'zi yozadi
+            ic.process_key_event(kv, 0, M.RELEASE_MASK)
+            aylan(2)
+        aylan()
+        natija = bufer['matn']
+        togri = natija == kutilgan
+        xato += not togri
+        print(f"{'✓' if togri else '✗'} darhol {dvigatel:13} {yubor!r:24} → {natija!r}"
+              + ('' if togri else f'  (kutilgan {kutilgan!r})'))
+    for u in ulanish:
+        ic.disconnect(u)
     return xato
 
 

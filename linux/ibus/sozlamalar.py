@@ -24,7 +24,7 @@ from xarita import TUGMA_ASLI  # noqa: E402
 ILOVA_ID = 'io.github.adkhamjon1.YangiKlaviatura'
 VERSIYA = '0.1'
 MANBALAR = 'org.gnome.desktop.input-sources'
-REJIM_MANBA = {'eski': ('ibus', 'ozbek-eski'), 'kirill': ('ibus', 'ozbek-kirill')}
+REJIM_MANBA = {'eski': ('ibus', 'ozbek-eski'), 'kirill_rejim': ('ibus', 'ozbek-kirill')}
 TARTIB = ['ozbek-lotin', 'ozbek-eski', 'ozbek-kirill']
 IBUS_KOMPONENT = '/usr/share/ibus/component/ozbek.xml'
 NAMUNA = "O'zbekiston — cho'l va tog'lar yurti. Тошкент — қадимий шаҳар."
@@ -40,14 +40,16 @@ BANDLAR = [
          "Is'hoq → Ishoq: s va h alohida o'qiladi"),
     ]),
     ("o'z", 'Eski lotin', "Hozirgi alifbo o'zgarishsiz yoziladi.", [
-        ('eski', 'accessories-dictionary-symbolic', 'Rejim yoqilgan',
+        ('eski', 'view-list-symbolic', "Ro'yxatda ko'rinadi",
          "O'chirilsa «o'z» til ro'yxatidan olinadi"),
         ('eski_belgi', 'tools-check-spelling-symbolic', 'oʻ va gʻ belgisi',
          "o' → oʻ, g' → gʻ (U+02BB)"),
     ]),
-    ('ўз', 'Kirill', "Kirillcha yoziladi, matn yangi lotinda chiqadi.", [
-        ('kirill', 'preferences-desktop-locale-symbolic', 'Rejim yoqilgan',
-         "шаҳар → şahar, ўғил → öğil. O'chirilsa «ўз» til ro'yxatidan olinadi"),
+    ('ўз', 'Kirill', "O'zbek kirill klaviaturasida yoziladi.", [
+        ('kirill_rejim', 'view-list-symbolic', "Ro'yxatda ko'rinadi",
+         "O'chirilsa «ўз» til ro'yxatidan olinadi"),
+        ('kirill', 'preferences-desktop-locale-symbolic', "Yangi lotinga o'girish",
+         "шаҳар → şahar, ўғил → öğil. O'chirilsa oddiy kirillcha yoziladi"),
     ]),
     (None, 'Umumiy', "Parol maydonida o'girish doim o'chiq bo'ladi.", [
         ('tutuq', 'font-x-generic-symbolic', 'Tutuq belgisi ʼ',
@@ -56,7 +58,7 @@ BANDLAR = [
          "ssh, bash, chmod kabi buyruqlar o'zgarmaydi"),
     ]),
 ]
-QARAM = {'eski_belgi': 'eski'}   # rejim o'chiq bo'lsa uning ichki sozlamasi xira turadi
+QARAM = {'eski_belgi': 'eski', 'kirill': 'kirill_rejim'}   # rejim o'chiq bo'lsa uning ichki sozlamasi xira turadi
 
 # Toggle bosilganda pastda chiqadigan izoh: (yoqilganda, o'chirilganda)
 XABAR = {
@@ -65,7 +67,8 @@ XABAR = {
     'sh_ajrat': ("s'h ajratiladi: Is'hoq → Ishoq.", "s'h o'zgarishsiz qoladi."),
     'eski': ("«o'z» qo'shildi: Super+Probel bilan tanlanadi, «öz» ga ta'sir qilmaydi.", "«o'z» til ro'yxatidan olindi."),
     'eski_belgi': ("«o'z» da o' → oʻ, g' → gʻ yoziladi.", "«o'z» da apostrof odatdagi ' bo'ladi."),
-    'kirill': ("«ўз» qo'shildi: Super+Probel bilan tanlanadi.", "«ўз» til ro'yxatidan olindi."),
+    'kirill_rejim': ("«ўз» qo'shildi: Super+Probel bilan tanlanadi.", "«ўз» til ro'yxatidan olindi."),
+    'kirill': ("«ўз» da matn yangi lotinda chiqadi.", "«ўз» da oddiy kirillcha yoziladi."),
     'tutuq': ("So'z ichidagi apostrof ʼ bo'ladi.", "Apostrof odatdagi ' bo'lib qoladi."),
     'terminal': ("Terminalda matn o'girilmaydi.", "Terminalda ham matn o'giriladi."),
 }
