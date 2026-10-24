@@ -10,8 +10,10 @@ STANDART = {
     'tugmalar': True,   # W → ş, C → ç, [ → ö, ] → ğ
     'lotin': True,      # sh → ş, ch → ç, o' → ö, g' → ğ
     'kirill': True,     # «ўз» rejimi: kirillcha → yangi lotin
+    'eski': True,       # «o'z» rejimi: eski lotin yozuvi
     'sh_ajrat': True,   # s'h → sh
     'tutuq': False,     # so'z ichidagi ' → ʼ
+    'eski_belgi': False,  # «o'z» da o' → oʻ, g' → gʻ (U+02BB)
     'terminal': True,   # terminalda o'girmaslik
 }
 

@@ -24,6 +24,19 @@
       <setup>/usr/bin/python3 /usr/local/share/yangi-klaviatura/sozlamalar.py</setup>
     </engine>
     <engine>
+      <name>ozbek-eski</name>
+      <language>uz</language>
+      <license></license>
+      <author>adkhamjon1</author>
+      <icon>yangi-klaviatura</icon>
+      <layout>us</layout>
+      <longname>O'zbek</longname>
+      <description>Eski lotin yozuvi: o', g', sh, ch o'zgarishsiz</description>
+      <rank>0</rank>
+      <symbol>o'z</symbol>
+      <setup>/usr/bin/python3 /usr/local/share/yangi-klaviatura/sozlamalar.py</setup>
+    </engine>
+    <engine>
       <name>ozbek-kirill</name>
       <language>uz</language>
       <license></license>

@@ -24,7 +24,8 @@ from xarita import TUGMA_ASLI  # noqa: E402
 ILOVA_ID = 'io.github.adkhamjon1.YangiKlaviatura'
 VERSIYA = '0.1'
 MANBALAR = 'org.gnome.desktop.input-sources'
-KIRILL_MANBA = ('ibus', 'ozbek-kirill')
+REJIM_MANBA = {'eski': ('ibus', 'ozbek-eski'), 'kirill': ('ibus', 'ozbek-kirill')}
+TARTIB = ['ozbek-lotin', 'ozbek-eski', 'ozbek-kirill']
 IBUS_KOMPONENT = '/usr/share/ibus/component/ozbek.xml'
 NAMUNA = "O'zbekiston — cho'l va tog'lar yurti. Тошкент — қадимий шаҳар."
 
@@ -36,12 +37,16 @@ BANDLAR = [
          "sh → ş, ch → ç, o' → ö, g' → ğ"),
         ('kirill', 'preferences-desktop-locale-symbolic', "Kirill yozuvidan o'girish",
          '«ўз» rejimi: шаҳар → şahar, ўғил → öğil'),
+        ('eski', 'accessories-dictionary-symbolic', "Eski lotin rejimi",
+         "«o'z» rejimi: o', g', sh, ch o'zgarishsiz yoziladi"),
     ]),
     ('Aniqlik', "Parol maydonida o'girish doim o'chiq bo'ladi.", [
         ('sh_ajrat', 'format-text-strikethrough-symbolic', "s'h → sh",
          "Is'hoq → Ishoq: s va h alohida o'qiladi"),
         ('tutuq', 'font-x-generic-symbolic', 'Tutuq belgisi ʼ',
          "ma'no → maʼno (U+02BC)"),
+        ('eski_belgi', 'tools-check-spelling-symbolic', 'oʻ va gʻ belgisi',
+         "«o'z» rejimida: o' → oʻ, g' → gʻ (U+02BB)"),
         ('terminal', 'utilities-terminal-symbolic', "Terminalda o'girmaslik",
          "ssh, bash, chmod kabi buyruqlar o'zgarmaydi"),
     ]),
@@ -159,8 +164,9 @@ class Oyna(Adw.ApplicationWindow):
     def _rejimlar(self):
         guruh = Adw.PreferencesGroup(title='Rejimlar')
         for belgi, nom, tavsif in (
-            ('öz', 'Lotin sxemasi', "Lotincha yoziladi, yangi harflar o'zi chiqadi"),
-            ('ўз', 'Kirill sxemasi', 'Kirillcha yoziladi, matn yangi lotinda chiqadi'),
+            ('öz', 'Yangi lotin', "Lotincha yoziladi, yangi harflar o'zi chiqadi"),
+            ("o'z", 'Eski lotin', "Hozirgi alifbo: o', g', sh, ch o'zgarishsiz"),
+            ('ўз', 'Kirill', 'Kirillcha yoziladi, matn yangi lotinda chiqadi'),
         ):
             qator = Adw.ActionRow(title=nom, subtitle=tavsif)
             yorliq = Gtk.Label(label=belgi, valign=Gtk.Align.CENTER, width_chars=3)
@@ -180,8 +186,8 @@ class Oyna(Adw.ApplicationWindow):
     def _ozgardi(self, qator, _param, kalit):
         self.s[kalit] = qator.get_active()
         sozlama.yoz(self.s)
-        if kalit == 'kirill':
-            self._kirill_manba(self.s['kirill'])
+        if kalit in REJIM_MANBA:
+            self._manba(REJIM_MANBA[kalit], self.s[kalit])
         self._yangila()
 
     def _yangila(self):
@@ -199,17 +205,19 @@ class Oyna(Adw.ApplicationWindow):
         self.get_clipboard().set(self._ogir())
         self.toastlar.add_toast(Adw.Toast(title='Nusxa olindi', timeout=2))
 
-    def _kirill_manba(self, yoq):
-        """«ўз» rejimi GNOME til ro'yxatiga qo'shiladi yoki undan olinadi."""
+    def _manba(self, juft, yoq):
+        """«o'z» yoki «ўз» rejimi GNOME til ro'yxatiga qo'shiladi yoki undan olinadi."""
         manba = Gio.SettingsSchemaSource.get_default()
         if not os.path.exists(IBUS_KOMPONENT) or not manba or not manba.lookup(MANBALAR, True):
             return
         sozlamalar = Gio.Settings.new(MANBALAR)
         royxat = list(sozlamalar.get_value('sources').unpack())
-        if yoq and KIRILL_MANBA not in royxat:
-            royxat.append(KIRILL_MANBA)
-        elif not yoq and KIRILL_MANBA in royxat:
-            royxat.remove(KIRILL_MANBA)
+        if yoq and juft not in royxat:
+            keyingi = [i for i, (_, nom) in enumerate(royxat)
+                       if nom in TARTIB and TARTIB.index(nom) > TARTIB.index(juft[1])]
+            royxat.insert(keyingi[0] if keyingi else len(royxat), juft)
+        elif not yoq and juft in royxat:
+            royxat.remove(juft)
         else:
             return
         sozlamalar.set_value('sources', GLib.Variant('a(ss)', royxat))

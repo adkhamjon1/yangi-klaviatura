@@ -12,6 +12,7 @@ klaviaturadan qidirish shart emas.
 | Panelda | Kim uchun | Nima bo'ladi |
 |---|---|---|
 | **öz** | Lotincha yozuvchilar | W, C, [, ] tugmalarida yangi harflar turadi; eski yozuvdagi sh, ch, o', g' ham o'zi yangi harfga aylanadi |
+| **o'z** | Eski lotinda yozish kerak bo'lganda | Hozirgi alifbo (o', g', sh, ch) o'zgarishsiz yoziladi; apostrof odatdagidek ' tugmasida |
 | **ўз** | Kirillcha yozuvchilar | Odatdagi o'zbek kirill klaviaturasida yoziladi, matn yangi lotinda chiqadi |
 
 Rejimlar Super+Probel bilan almashtiriladi.
@@ -47,7 +48,7 @@ holda ko'rinadi va keyingi tugma bilan tasdiqlanadi.
 
 «Özbek klaviaturasi» ilovasida har funksiya alohida yoqiladi va o'chiriladi:
 tugmalardagi harflar, eski lotin va kirill yozuvidan o'girish, `s'h → sh`, tutuq belgisi `ʼ`,
-terminalda o'girmaslik. Ilovada matnni sinab ko'rish maydoni ham bor. Parol maydonida
+terminalda o'girmaslik, «o'z» rejimida rasmiy oʻ va gʻ belgisi (U+02BB). Ilovada matnni sinab ko'rish maydoni ham bor. Parol maydonida
 o'girish doim o'chiq bo'ladi.
 
 ## Linux

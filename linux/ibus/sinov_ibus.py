@@ -2,8 +2,16 @@
 """Jonli sinov: o'rnatilgan dvigatelga IBus orqali tugma yuboradi va chiqqan matnni tekshiradi.
 
     python3 linux/ibus/sinov_ibus.py
+
+Sinov alohida, xususiy ibus-daemon nusxasida yuradi: IBus 1.5 da dvigatel butun tizim uchun
+bitta (global), uni almashtirish ish stolidagi yozishga ta'sir qilmasligi kerak.
 """
+import os
+import shutil
+import subprocess
 import sys
+import tempfile
+import time
 
 import gi
 
@@ -21,6 +29,7 @@ SINOVLAR = [
     ('ozbek-lotin', 'ch', 'ç', None),                  # C tugmasi (ç) + eski odat h
     ('ozbek-lotin', 'shahar', 'shahar', IBus.InputPurpose.PASSWORD),
     ('ozbek-lotin', 'ssh', 'ssh', IBus.InputPurpose.TERMINAL),
+    ('ozbek-eski', "o'zbek shahar choy", "o'zbek shahar choy", None),
     ('ozbek-kirill', 'Ўзбекистон шаҳар', 'Özbekiston şahar', None),
     ('ozbek-kirill', 'ЁЗ поезд цирк', 'YOZ poyezd sirk', None),
 ]
@@ -35,10 +44,32 @@ def aylan(soni=20):
 
 
 def main():
-    IBus.init()
-    bus = IBus.Bus()
-    if not bus.is_connected():
-        sys.exit('IBus ishlamayapti')
+    papka = tempfile.mkdtemp(prefix='yangi-klaviatura-ibus-')
+    manzil = f'unix:path={papka}/ibus'
+    os.environ['IBUS_ADDRESS'] = manzil
+    daemon = subprocess.Popen(
+        ['ibus-daemon', '--single', '--panel=disable', '--config=disable', '--cache=none', f'--address={manzil}'],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    try:
+        for _ in range(100):
+            if os.path.exists(f'{papka}/ibus'):
+                break
+            time.sleep(0.05)
+        IBus.init()
+        bus = IBus.Bus()
+        if not bus.is_connected():
+            sys.exit('Xususiy IBus nusxasiga ulanib bo\'lmadi')
+        xato = sinovlar(bus)
+        bus.exit(False)
+        daemon.wait(timeout=5)
+    finally:
+        if daemon.poll() is None:
+            daemon.terminate()
+        shutil.rmtree(papka, ignore_errors=True)
+    sys.exit(1 if xato else 0)
+
+
+def sinovlar(bus):
     ic = bus.create_input_context('yangi-klaviatura-sinov')
     ic.set_capabilities(IBus.Capabilite.PREEDIT_TEXT | IBus.Capabilite.FOCUS)
     chiqdi = []
@@ -47,8 +78,12 @@ def main():
 
     xato = 0
     for dvigatel, yubor, kutilgan, maqsad in SINOVLAR:
-        ic.set_engine(dvigatel)
-        aylan()
+        bus.set_global_engine(dvigatel)
+        for _ in range(100):                 # dvigatel almashguncha kutiladi (birinchi marta sekinroq)
+            aylan(2)
+            joriy = ic.get_engine()
+            if joriy and joriy.get_name() == dvigatel:
+                break
         ic.set_content_type(maqsad if maqsad is not None else IBus.InputPurpose.FREE_FORM, 0)
         aylan()
         chiqdi.clear()
@@ -66,7 +101,7 @@ def main():
         xato += natija != kutilgan
         print(f'{belgi} {dvigatel:13} {yubor!r:22} → {natija!r}' + ('' if natija == kutilgan else f'  (kutilgan {kutilgan!r})'))
     ic.focus_out()
-    sys.exit(1 if xato else 0)
+    return xato
 
 
 if __name__ == '__main__':

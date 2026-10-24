@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """«Özbek (yangi yozuv)» IBus dvigateli.
 
-Ikki rejim bitta kod bilan ishlaydi, farqi faqat sxemada:
-  ozbek-lotin  «öz» — ozbek sxemasi (W → ş, C → ç, [ → ö, ] → ğ), eski lotincha
-                      sh, ch, o', g' ham yangi harfga o'giriladi;
-  ozbek-kirill «ўз» — o'zbek kirill sxemasi, kirillcha yozilgan matn yangi lotinda chiqadi.
+Uch rejim bitta kod bilan ishlaydi, farqi sxemada:
+  ozbek-lotin  «öz»  — ozbek sxemasi (W → ş, C → ç, [ → ö, ] → ğ), eski lotincha
+                       sh, ch, o', g' ham yangi harfga o'giriladi;
+  ozbek-eski   «o'z» — US sxemasi, eski lotin yozuvi o'zgarishsiz (xohlansa o' → oʻ);
+  ozbek-kirill «ўз»  — o'zbek kirill sxemasi, kirillcha yozilgan matn yangi lotinda chiqadi.
 Sozlamalar sozlama.json da turadi va o'zgarsa darhol qo'llanadi.
 """
 import logging
@@ -41,6 +42,7 @@ KURSOR = {
 # Sxema hali qo'llanmagan bo'lsa (GNOME yangi sxemani qayta kirgach taniydi),
 # W, C, [, ] oddiy belgi beradi — ularni dvigatelning o'zi yangi harfga aylantiradi.
 ASLI_TUGMA = {asl: yangi for yangi, asl in TUGMA_ASLI.items()}
+APOSTROF = frozenset("'’`‘")
 
 
 class OzbekEngine(IBus.Engine):
@@ -55,6 +57,7 @@ class OzbekEngine(IBus.Engine):
         self.imkoniyat = 0
         self.c_tugmadan = False
         self.preedit_bor = False
+        self.eski_oldingi = ''
         self._sozla()
         self._kuzatuvchi = sozlama.kuzat(self._sozla)
 
@@ -72,6 +75,8 @@ class OzbekEngine(IBus.Engine):
             return False
         if self.maxfiy or (self.terminal and self.s['terminal']):
             return False
+        if self.get_name() == 'ozbek-eski':
+            return self._eski(keyval, state)
         c_tugmadan, self.c_tugmadan = self.c_tugmadan, False
 
         if state & BOSHQARUV:
@@ -109,6 +114,18 @@ class OzbekEngine(IBus.Engine):
             return False                        # hech narsa o'zgarmadi — ilovaning o'zi yozadi
         self._chiqar(matn)
         return True
+
+    def _eski(self, keyval, state):
+        """«o'z»: eski lotin yozuvi o'zgarishsiz; xohlansa o' va g' dagi apostrof ʻ (U+02BB) bo'ladi."""
+        oldingi, self.eski_oldingi = self.eski_oldingi, ''
+        if not self.s['eski_belgi'] or state & (BOSHQARUV | M.MOD5_MASK):
+            return False
+        asl = IBus.keyval_to_unicode(keyval).strip('\x00')
+        self.eski_oldingi = asl
+        if asl in APOSTROF and oldingi in ('o', 'O', 'g', 'G'):
+            self._chiqar('ʻ')
+            return True
+        return False
 
     def _chiqar(self, matn):
         """Tasdiqlangan matnni yozadi va kutayotgan qismni tagiga chizib ko'rsatadi."""
@@ -166,7 +183,7 @@ def main():
     if not bus.is_connected():
         sys.exit('IBus ishlamayapti')
     zavod = IBus.Factory.new(bus.get_connection())
-    for nom in ('ozbek-lotin', 'ozbek-kirill'):
+    for nom in ('ozbek-lotin', 'ozbek-eski', 'ozbek-kirill'):
         zavod.add_engine(nom, GObject.type_from_name('OzbekEngine'))
     if '--ibus' in sys.argv:
         bus.request_name('org.freedesktop.IBus.Ozbek', 0)

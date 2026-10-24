@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # «Özbek (yangi yozuv)» klaviaturasini o'rnatadi.
-#   bash linux/ornat.sh                — to'liq: «öz» va «ўз» rejimlari (IBus) va sozlamalar oynasi
+#   bash linux/ornat.sh                — to'liq: «öz», «o'z» va «ўз» rejimlari (IBus) va sozlamalar oynasi
 #   bash linux/ornat.sh --faqat-sxema  — faqat W/C/[/] sxemasi, sudo'siz; GNOME uni qayta kirgach ko'radi
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -52,8 +52,9 @@ fi
 echo "✓ IBus: $(ibus list-engine 2>/dev/null | grep -c 'ozbek-') ta rejim"
 
 # 3. GNOME til ro'yxati: oddiy sxema o'rniga IBus rejimlari
-kirill=$(python3 -c 'import sys; sys.path.insert(0, "ibus"); import sozlama; print(int(sozlama.oqi()["kirill"]))')
+read -r eski kirill < <(python3 -c 'import sys; sys.path.insert(0, "ibus"); import sozlama; s = sozlama.oqi(); print(int(s["eski"]), int(s["kirill"]))')
 qosh=(-xkb:ozbek +ibus:ozbek-lotin)
+[ "$eski" = 1 ] && qosh+=(+ibus:ozbek-eski)
 [ "$kirill" = 1 ] && qosh+=(+ibus:ozbek-kirill)
 python3 manbalar.py "${qosh[@]}"
 echo "Almashtirish: Super+Probel. Sozlamalar: «Özbek klaviaturasi» ilovasi."
