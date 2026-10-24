@@ -82,7 +82,9 @@ env GTK_IM_MODULE=xim XMODIFIERS=@im=ibus /snap/bin/code
 ```
 
 Doimiy qilish uchun dasturning `.desktop` yorlig'i `~/.local/share/applications/` ga nusxalanadi
-va `Exec=` qatori boshiga `env GTK_IM_MODULE=xim XMODIFIERS=@im=ibus` qo'shiladi.
+va `Exec=` qatori boshiga `env GTK_IM_MODULE=xim XMODIFIERS=@im=ibus` qo'shiladi. Dastur to'liq
+yopilib, menyu yoki dock'dan qayta ochilishi kerak: o'zini o'zi qayta ishga tushirgan dastur eski
+muhitni meros oladi. XIM ko'prigi `ibus-x11` ishlab turishi shart.
 
 ## Matnni o'girish
 

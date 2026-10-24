@@ -50,6 +50,10 @@ if [ $yangilash = 1 ]; then
   for _ in $(seq 40); do ibus list-engine 2>/dev/null | grep -q ozbek-lotin && break; sleep 0.25; done
 fi
 echo "✓ IBus: $(ibus list-engine 2>/dev/null | grep -c 'ozbek-') ta rejim"
+# IBus qayta ishga tushganda XIM ko'prigi (XWayland dasturlari uchun) yopilib qolishi mumkin
+if [ -n "${DISPLAY:-}" ] && [ -x /usr/libexec/ibus-x11 ] && ! pgrep -x ibus-x11 >/dev/null; then
+  setsid /usr/libexec/ibus-x11 >/dev/null 2>&1 < /dev/null &
+fi
 
 # 3. GNOME til ro'yxati: oddiy sxema o'rniga IBus rejimlari
 read -r eski kirill < <(python3 -c 'import sys; sys.path.insert(0, "ibus"); import sozlama; s = sozlama.oqi(); print(int(s["eski"]), int(s["kirill"]))')
