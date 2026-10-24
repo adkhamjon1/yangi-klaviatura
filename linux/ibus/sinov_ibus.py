@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Jonli sinov: o'rnatilgan dvigatelga IBus orqali tugma yuboradi va chiqqan matnni tekshiradi.
 
-    python3 linux/ibus/sinov_ibus.py
+    python3 linux/ibus/sinov_ibus.py           # o'rnatilgan dvigatel
+    python3 linux/ibus/sinov_ibus.py --manba   # repo'dagi dvigatel (o'rnatilganiga tegmaydi)
 
 Sinov alohida, xususiy ibus-daemon nusxasida yuradi: IBus 1.5 da dvigatel butun tizim uchun
 bitta (global), uni almashtirish ish stolidagi yozishga ta'sir qilmasligi kerak. Nusxa o'z
@@ -36,6 +37,10 @@ SINOVLAR = [
     ('ozbek-eski', "o'zbek shahar choy", "o'zbek shahar choy", None),
     ('ozbek-kirill', 'Ўзбекистон шаҳар', 'Özbekiston şahar', None),
     ('ozbek-kirill', 'ЁЗ поезд цирк', 'YOZ poyezd sirk', None),
+    # «tagiga»da butun so'z tagiga chizilgan: so'z oxirida istisno va lug'at qo'llanadi
+    ('ozbek-lotin', 'www.shifo.uz info@choy.uz ', 'www.shifo.uz info@choy.uz ', None),
+    ('ozbek-lotin', 'Çrome kas shahar', 'Chrome kas şahar', None),
+    ('ozbek-lotin', '[]il [wa wc[] ', 'öğil öşa şçöğ ', None),
 ]
 
 
@@ -52,10 +57,16 @@ def main():
     papka = tempfile.mkdtemp(prefix='yangi-klaviatura-ibus-')
     manzil = f'unix:path={papka}/ibus'
     os.environ['IBUS_ADDRESS'] = manzil
+    muhit = {**os.environ, 'XDG_CONFIG_HOME': f'{papka}/config'}
+    if '--manba' in sys.argv:                # komponent repo'dagi engine.py ni ko'rsatadi
+        bu = os.path.dirname(os.path.abspath(__file__))
+        os.makedirs(f'{papka}/component')
+        xml = open(f'{bu}/ozbek.xml', encoding='utf-8').read().replace('@TIZIM@', bu).replace('@VERSIYA@', 'manba')
+        open(f'{papka}/component/ozbek.xml', 'w', encoding='utf-8').write(xml)
+        muhit['IBUS_COMPONENT_PATH'] = f'{papka}/component'
     daemon = subprocess.Popen(
         ['ibus-daemon', '--single', '--panel=disable', '--config=disable', '--cache=none', f'--address={manzil}'],
-        env={**os.environ, 'XDG_CONFIG_HOME': f'{papka}/config'},
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        env=muhit, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     xato = 0
     try:
         for _ in range(100):

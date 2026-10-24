@@ -11,7 +11,8 @@ Ikki yozish usuli bor:
   darhol   — dastur atrofdagi matnni bersa (GNOME'da SURROUNDING_TEXT): harf darhol yoziladi,
              o'girish joyida bo'ladi (s → ş); so'z tugaganda lug'at tuzatadi, undan keyingi
              Backspace so'zni eski holiga qaytaradi;
-  tagiga   — qolgan joyda: qaror kutayotgan harf tagiga chizilib turadi.
+  tagiga   — qolgan joyda: joriy so'z tagiga chizilib turadi va so'z oxirida (istisno va lug'at
+             bilan) yoziladi — havola, email va xorijiy nom buzilmaydi.
 Sozlamalar sozlama.json da turadi va o'zgarsa darhol qo'llanadi.
 """
 import logging
@@ -172,21 +173,24 @@ class OzbekEngine(IBus.Engine):
             self._almashtir(oldin, yangi)
             return True
 
-        kutgan = bool(self.og.kutish)
-        matn = self.og.xom(belgi) if altgr else self.og.qabul(belgi, tugma)
-        if not kutgan and not self.og.kutish and matn == asl:
-            return False
-        self._chiqar(matn)
+        if altgr:
+            self.og.xom(belgi)
+        else:
+            self.og.qabul(belgi, tugma)
+        self._korsat(self.og.ekran())
         return True
 
     def _soz_oxiri(self, darhol, chegara):
         """Bo'shliq, Enter yoki Tab: so'z tugadi — istisno va lug'at qo'llanadi."""
         if not darhol:
-            self._chiqar(self.og.tugat())
-            if chegara:
+            self.og.yakunla()
+            soz = self.og.token_chiq
+            if chegara:                         # bo'shliq so'z bilan birga yoziladi
                 self.og.qabul(chegara)
-            else:
-                self._unut()
+                self._yoz(soz + chegara)
+                return True
+            self._yoz(soz)                      # Enter, Tab ilovaning o'ziga boradi
+            self._unut()
             return False
         xom, buzildi = self.og.token_xom, self.og.buzildi
         self.og.yakunla()
@@ -218,14 +222,21 @@ class OzbekEngine(IBus.Engine):
             self._unut()
             self.og.oldingi = eski[-1:]
             return True
+        if not darhol:
+            if not self.og.ekran():             # tagiga chizilgan so'z yo'q — ilova o'zi o'chiradi
+                self._unut()
+                return False
+            if self.og.kutish:
+                self.og.orqaga()
+            else:
+                self.og.ochirildi()
+            self._korsat(self.og.ekran())
+            return True
         if self.og.kutish:
             self.og.orqaga()
-            if darhol:
-                oldin, yangi = self.ekranda, self.og.ekran()
-                self.ekranda = yangi
-                self._almashtir(oldin, yangi)
-            else:
-                self._chiqar('')
+            oldin, yangi = self.ekranda, self.og.ekran()
+            self.ekranda = yangi
+            self._almashtir(oldin, yangi)
             return True
         if self.og.token_chiq:
             self.og.ochirildi()                 # ilova o'zi o'chiradi
@@ -261,28 +272,33 @@ class OzbekEngine(IBus.Engine):
 
     def _tasdiqla(self, darhol):
         """Kutayotgan harf boricha qoladi (Ctrl, strelka va hokazodan oldin)."""
+        self.og.tugat()
         if darhol:
-            self.og.tugat()
             oldin, yangi = self.ekranda, self.og.ekran()
             self.ekranda = yangi
             self._almashtir(oldin, yangi)
         else:
-            self._chiqar(self.og.tugat())
+            self._yoz(self.og.ekran())          # tagiga chizilgan so'z boricha yoziladi
+            self._unut()
 
-    def _chiqar(self, matn):
-        """«tagiga»: tasdiqlangan matnni yozadi va kutayotgan qismni tagiga chizib ko'rsatadi."""
-        korinish = self.og.korinish()
-        if self.preedit_bor and (matn or not korinish):
-            self.update_preedit_text_with_mode(IBus.Text.new_from_string(''), 0, False,
-                                               IBus.PreeditFocusMode.CLEAR)
-            self.preedit_bor = False
+    def _korsat(self, korinish):
+        """«tagiga»: joriy so'z tagiga chizilib turadi (bo'sh bo'lsa yo'qoladi)."""
+        if not korinish:
+            if self.preedit_bor:
+                self.update_preedit_text_with_mode(IBus.Text.new_from_string(''), 0, False,
+                                                   IBus.PreeditFocusMode.CLEAR)
+                self.preedit_bor = False
+            return
+        t = IBus.Text.new_from_string(korinish)
+        t.append_attribute(IBus.AttrType.UNDERLINE, IBus.AttrUnderline.SINGLE, 0, len(korinish))
+        self.update_preedit_text_with_mode(t, len(korinish), True, IBus.PreeditFocusMode.COMMIT)
+        self.preedit_bor = True
+
+    def _yoz(self, matn):
+        """«tagiga»: tagiga chizilgan so'z o'rniga matn yoziladi."""
+        self._korsat('')
         if matn:
             self.commit_text(IBus.Text.new_from_string(matn))
-        if korinish:
-            t = IBus.Text.new_from_string(korinish)
-            t.append_attribute(IBus.AttrType.UNDERLINE, IBus.AttrUnderline.SINGLE, 0, len(korinish))
-            self.update_preedit_text_with_mode(t, len(korinish), True, IBus.PreeditFocusMode.COMMIT)
-            self.preedit_bor = True
 
     def _oldingi_belgi(self):
         """Kursordan oldingi belgi (е → ye/e va ц → ts/s qoidasi uchun)."""
@@ -313,8 +329,8 @@ class OzbekEngine(IBus.Engine):
         self._unut()
 
     def do_reset(self):
-        if not self._darhol():
-            self._chiqar(self.og.tugat())
+        # «tagiga»: tagiga chizilgan so'zni IBus o'zi yozib qo'yadi (PreeditFocusMode.COMMIT)
+        self.preedit_bor = False
         self._unut()
 
     def do_disable(self):
