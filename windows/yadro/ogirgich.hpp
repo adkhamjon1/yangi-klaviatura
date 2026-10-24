@@ -54,15 +54,17 @@ public:
     char32_t oldingi = 0;          // oxirgi chiqqan belgi; 0 — boshlanish
     bool oldingi_nomalum = false;  // kursor ko'chdi
     Matn token_xom, token_tugma, token_chiq;
+    Matn token_tekshir() const;    // istisno tekshiruvi uchun: tugmadagi yangi harf eski yozuvda (ö → o')
     bool otkaz = false, buzildi = false;
 
 private:
     bool yumshoq_ = false;
+    std::vector<Matn> tekshir_;    // token_xom ning har belgisiga bittadan
     void token_yangi();
     Matn chiqar(const Matn& m);
     Matn chiqar(char32_t c) { return chiqar(Matn(1, c)); }
     std::optional<Matn> asl_nusxa(bool yakuniy) const;
-    Matn qism(const Matn& q) const;
+    Matn qism(const Matn& q, const Matn& tekshir) const;
     Matn yangi(char32_t c);
     bool davom(char32_t c, Matn& matn, bool& yutdi);
     Matn kirill(char32_t c, char32_t past);

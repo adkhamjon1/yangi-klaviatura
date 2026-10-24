@@ -14,6 +14,22 @@ const Matn TINISH = U".,;:!?\"«»„“”()[]{}…—–*";
 const Matn LOTIN_BOSH = U"sScCoOgG";
 const Matn KIRILL_ORINGA_QARAB = U"ецъь";
 const Matn QISM_AJRATGICH = U"-/–";
+
+// Tugmadan yozilgan yangi harf istisno qoidalarida eski yozuvdagidek ko'riladi: [ tugmasidagi ö
+// NOTANISH (Pöschl) deb, W dagi ş esa XORIJIY deb topilmasin.
+Matn eski_shakl(char32_t c) {
+    switch (c) {
+        case U'ş': return U"sh";
+        case U'Ş': return U"SH";
+        case U'ç': return U"ch";
+        case U'Ç': return U"CH";
+        case U'ö': return U"o'";
+        case U'Ö': return U"O'";
+        case U'ğ': return U"g'";
+        case U'Ğ': return U"G'";
+        default: return Matn(1, c);
+    }
+}
 const Matn NOTANISH = U"äöüßéèêëáàâïñøåæ";  // eski o'zbek lotinida yo'q harf (kichik holda)
 constexpr char32_t KATTA_KIRILL = 0;        // kutish belgisi: Ё → «Yo» yoki «YO»
 
@@ -284,6 +300,7 @@ std::vector<Matn> lugat_qatorlari(const std::string& fayl_matni) {
 void Ogirgich::token_yangi() {
     token_xom.clear();
     token_tugma.clear();
+    tekshir_.clear();
     token_chiq.clear();
     otkaz = buzildi = false;
 }
@@ -298,8 +315,14 @@ Matn Ogirgich::chiqar(const Matn& m) {
     return m;
 }
 
+Matn Ogirgich::token_tekshir() const {
+    Matn m;
+    for (const auto& q : tekshir_) m += q;
+    return m;
+}
+
 std::optional<Matn> Ogirgich::asl_nusxa(bool yakuniy) const {
-    if (xom_qolsinmi(token_xom, yakuniy)) return token_xom;
+    if (xom_qolsinmi(token_tekshir(), yakuniy)) return token_xom;
     if (havolami(token_tugma)) return token_tugma;
     return std::nullopt;
 }
@@ -320,17 +343,20 @@ void Ogirgich::yakunla() {
     bool ajratgich = false;
     for (char32_t c : ichki) ajratgich = ajratgich || ichida(QISM_AJRATGICH, c);
     if (ajratgich && !havolami(token_tugma) && lotin_soz) {  // C-uchli, MR-shartli
-        Matn natija, bolak;
-        for (char32_t c : xom) {
+        Matn natija, bolak, bolak_t;
+        for (size_t i = 0; i < xom.size(); ++i) {
+            const char32_t c = xom[i];
             if (ichida(QISM_AJRATGICH, c)) {
-                natija += qism(bolak);
+                natija += qism(bolak, bolak_t);
                 natija += c;
                 bolak.clear();
+                bolak_t.clear();
             } else {
                 bolak += c;
+                bolak_t += i < tekshir_.size() ? tekshir_[i] : Matn(1, c);
             }
         }
-        natija += qism(bolak);
+        natija += qism(bolak, bolak_t);
         token_chiq = natija;
         return;
     }
@@ -342,8 +368,8 @@ void Ogirgich::yakunla() {
     }
 }
 
-Matn Ogirgich::qism(const Matn& q) const {
-    if (q.empty() || xom_qolsinmi(q, true)) return q;
+Matn Ogirgich::qism(const Matn& q, const Matn& tekshir) const {
+    if (q.empty() || xom_qolsinmi(tekshir, true)) return q;
     Sozlama toza = s;
     toza.istisnolar = false;
     Ogirgich og(toza);
@@ -364,6 +390,7 @@ Matn Ogirgich::qabul(char32_t c, char32_t tugma) {
     }
     token_xom += c;
     token_tugma += tugma ? tugma : c;
+    tekshir_.push_back(tugma ? eski_shakl(c) : Matn(1, c));
     if (s.istisnolar && !otkaz) {
         if (auto asl = asl_nusxa(false)) {
             otkaz = true;
@@ -403,11 +430,13 @@ void Ogirgich::orqaga() {
     if (kutish.empty() || kutish[0] == KATTA_KIRILL) kutish.clear();
     else kutish.pop_back();
     if (!token_xom.empty()) token_xom.pop_back();
+    if (!tekshir_.empty()) tekshir_.pop_back();
 }
 
 void Ogirgich::ochirildi() {
     if (!token_chiq.empty()) token_chiq.pop_back();
     if (!token_xom.empty()) token_xom.pop_back();
+    if (!tekshir_.empty()) tekshir_.pop_back();
     buzildi = true;
 }
 
@@ -415,8 +444,9 @@ Matn Ogirgich::xom(char32_t c) {
     Matn m = tugat();
     token_xom += c;
     token_tugma += c;
+    tekshir_.push_back(Matn(1, c));
     m += chiqar(c);
-    if (s.istisnolar && !otkaz && xom_qolsinmi(token_xom)) {
+    if (s.istisnolar && !otkaz && xom_qolsinmi(token_tekshir())) {
         otkaz = true;
         token_chiq = token_xom;
     }

@@ -46,6 +46,9 @@ UNLI_HARF = re.compile('[AEIOUaeiou]')
 QISM_AJRATGICH = re.compile('([-/–])')
 TINISH = '.,;:!?"«»„“”()[]{}…—–*'
 KIRILL_HARF = re.compile('[\u0400-\u04ff]')
+# Tugmadan yozilgan yangi harf istisno qoidalarida eski yozuvdagidek ko'riladi: [ tugmasidagi ö
+# NOTANISH (Pöschl) deb, W dagi ş esa XORIJIY deb topilmasin.
+ESKI_SHAKL = {'ş': 'sh', 'Ş': 'SH', 'ç': 'ch', 'Ç': 'CH', 'ö': "o'", 'Ö': "O'", 'ğ': "g'", 'Ğ': "G'"}
 LUGAT_FAYL = Path(__file__).with_name('lugat.txt')
 
 
@@ -164,6 +167,7 @@ class Ogirgich:
     def _token_yangi(self):
         self.token_xom = ''         # yozilgan belgilar (to'g'ri tugmadagi ş, ç ham shu yerda)
         self.token_tugma = ''       # tugmaning asl belgisi bilan (W tugmasidagi ş → w): www. ni tanish uchun
+        self._tekshir = []          # har belgi istisno tekshiruvi uchun (tugmadagi ö → o'), ESKI_SHAKL
         self.token_chiq = ''        # tasdiqlangan natija (kutayotgan qismsiz)
         self.otkaz = False          # so'z o'girilmaydigan deb topildi
         self.buzildi = False        # so'z ichida o'chirildi — orqaga tuzatish qilinmaydi
@@ -172,9 +176,13 @@ class Ogirgich:
         """Joriy so'z ekranda qanday turishi kerak (kutayotgan qism bilan)."""
         return self.token_chiq + self.korinish()
 
+    @property
+    def token_tekshir(self):
+        return ''.join(self._tekshir)
+
     def _asl_nusxa(self, yakuniy=False):
         """So'z o'girilmasligi kerak bo'lsa — uning asl ko'rinishi, aks holda None."""
-        if xom_qolsinmi(self.token_xom, yakuniy):
+        if xom_qolsinmi(self.token_tekshir, yakuniy):
             return self.token_xom
         if havolami(self.token_tugma):
             return self.token_tugma
@@ -193,8 +201,9 @@ class Ogirgich:
             return
         if QISM_AJRATGICH.search(xom.strip(TINISH)) and not havolami(self.token_tugma) and lotin_soz:
             # C-uchli, MR-shartli, Arnold-Chiari: har qism alohida tekshiriladi
-            self.token_chiq = ''.join(q if QISM_AJRATGICH.fullmatch(q) else self._qism(q)
-                                      for q in QISM_AJRATGICH.split(xom))
+            self.token_chiq = ''.join(q if QISM_AJRATGICH.fullmatch(q) else self._qism(q, t)
+                                      for q, t in zip(QISM_AJRATGICH.split(xom),
+                                                      QISM_AJRATGICH.split(self.token_tekshir)))
             return
         if self.otkaz:
             return
@@ -206,9 +215,9 @@ class Ogirgich:
             if tuzatilgan:
                 self.token_chiq = tuzatilgan
 
-    def _qism(self, qism):
+    def _qism(self, qism, tekshir):
         """Chiziqcha bilan ajralgan bo'lak: istisno bo'lsa asli, aks holda o'girilgani."""
-        if not qism or xom_qolsinmi(qism, yakuniy=True):
+        if not qism or xom_qolsinmi(tekshir, yakuniy=True):
             return qism
         og = Ogirgich(self.lotin, self.kirill, self.sh_ajrat, self.tutuq, istisnolar=False)
         chiq = ''.join(og.qabul(c) for c in qism) + og.tugat()
@@ -229,6 +238,7 @@ class Ogirgich:
             return matn
         self.token_xom += c
         self.token_tugma += tugma or c
+        self._tekshir.append(ESKI_SHAKL.get(c, c) if tugma else c)
         if self.istisnolar and not self.otkaz:
             asl = self._asl_nusxa()
             if asl is not None:
@@ -267,11 +277,13 @@ class Ogirgich:
         k = self.kutish
         self.kutish = '' if not k or k[0] == KATTA_KIRILL else k[:-1]
         self.token_xom = self.token_xom[:-1]
+        self._tekshir = self._tekshir[:-1]
 
     def ochirildi(self):
         """Backspace tasdiqlangan matnda (ilova o'zi o'chirdi): so'z endi aniq kuzatilmaydi."""
         self.token_chiq = self.token_chiq[:-1]
         self.token_xom = self.token_xom[:-1]
+        self._tekshir = self._tekshir[:-1]
         self.buzildi = True
 
     def xom(self, c):
@@ -279,8 +291,9 @@ class Ogirgich:
         matn = self.tugat()
         self.token_xom += c
         self.token_tugma += c
+        self._tekshir.append(c)
         matn += self._chiqar(c)
-        if self.istisnolar and not self.otkaz and xom_qolsinmi(self.token_xom):
+        if self.istisnolar and not self.otkaz and xom_qolsinmi(self.token_tekshir):
             self.otkaz = True
             self.token_chiq = self.token_xom
         return matn

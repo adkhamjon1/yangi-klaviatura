@@ -119,6 +119,17 @@ class Istisnolar(unittest.TestCase):
         og.yakunla()
         self.assertEqual(og.token_chiq, 'Chrome')
 
+    def test_yangi_harf_tugmadan(self):
+        """[ tugmasidagi ö xorijiy harf (Pöschl) emas: undan keyingi W, C, ] ham yangi harf beradi."""
+        tugmalar = {'w': 'ş', 'c': 'ç', '[': 'ö', ']': 'ğ'}
+        for yozilgan, kutilgan in [('[]il', 'öğil'), ('[wa', 'öşa'), ('[lcov', 'ölçov'), ('wc[]', 'şçöğ'),
+                                   ('www.[]il.uz', 'www.[]il.uz')]:
+            og = Ogirgich()
+            for c in yozilgan:
+                og.qabul(tugmalar.get(c, c), c if c in tugmalar else None)
+            og.yakunla()
+            self.assertEqual(og.token_chiq, kutilgan, yozilgan)
+
     def test_lugat_kirillga_tegmaydi(self):
         lugat = Lugat(['shahar'])
         self.assertEqual(ogir('shahar шаҳар', lugat=lugat), 'shahar şahar')
