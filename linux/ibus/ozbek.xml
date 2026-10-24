@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- yangi-klaviatura: IBus komponenti (/usr/share/ibus/component/ozbek.xml) -->
+<!-- yangi-klaviatura: IBus komponenti (/usr/share/ibus/component/ozbek.xml); @TIZIM@ va @VERSIYA@ ni ornat.sh / deb.sh qo'yadi -->
 <component>
   <name>org.freedesktop.IBus.Ozbek</name>
   <description>Özbek (yangi yozuv)</description>
-  <exec>/usr/bin/python3 /usr/local/share/yangi-klaviatura/engine.py --ibus</exec>
-  <version>0.1</version>
+  <exec>/usr/bin/python3 @TIZIM@/engine.py --ibus</exec>
+  <version>@VERSIYA@</version>
   <author>adkhamjon1</author>
   <license></license>
   <homepage>https://github.com/adkhamjon1/yangi-klaviatura</homepage>
@@ -21,7 +21,7 @@
       <description>Lotincha yoziladi: sh → ş, ch → ç, o' → ö, g' → ğ</description>
       <rank>0</rank>
       <symbol>öz</symbol>
-      <setup>/usr/bin/python3 /usr/local/share/yangi-klaviatura/sozlamalar.py</setup>
+      <setup>/usr/bin/python3 @TIZIM@/sozlamalar.py</setup>
     </engine>
     <engine>
       <name>ozbek-eski</name>
@@ -34,7 +34,7 @@
       <description>Eski lotin yozuvi: o', g', sh, ch o'zgarishsiz</description>
       <rank>0</rank>
       <symbol>o'z</symbol>
-      <setup>/usr/bin/python3 /usr/local/share/yangi-klaviatura/sozlamalar.py</setup>
+      <setup>/usr/bin/python3 @TIZIM@/sozlamalar.py</setup>
     </engine>
     <engine>
       <name>ozbek-kirill</name>
@@ -47,7 +47,7 @@
       <description>Kirillcha yoziladi, matn yangi lotinda chiqadi</description>
       <rank>0</rank>
       <symbol>ўз</symbol>
-      <setup>/usr/bin/python3 /usr/local/share/yangi-klaviatura/sozlamalar.py</setup>
+      <setup>/usr/bin/python3 @TIZIM@/sozlamalar.py</setup>
     </engine>
   </engines>
 </component>

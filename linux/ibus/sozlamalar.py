@@ -15,8 +15,7 @@ import gi  # noqa: E402
 
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-gi.require_version('Graphene', '1.0')
-from gi.repository import Adw, Gdk, Gio, GLib, Graphene, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 import foydalanuvchi  # noqa: E402
 import sozlama  # noqa: E402
@@ -360,6 +359,8 @@ class Oyna(Adw.ApplicationWindow):
     # -- sinov uchun surat --
 
     def skrin(self, yol):
+        gi.require_version('Graphene', '1.0')
+        from gi.repository import Graphene
         vidjet = self.get_content()
         en, boy = vidjet.get_width(), vidjet.get_height()
         surat = Gtk.Snapshot.new()

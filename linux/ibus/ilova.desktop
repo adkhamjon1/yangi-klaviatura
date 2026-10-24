@@ -2,7 +2,7 @@
 Type=Application
 Name=Özbek klaviaturasi
 Comment=Yangi o'zbek yozuvi klaviaturasi sozlamalari
-Exec=/usr/bin/python3 /usr/local/share/yangi-klaviatura/sozlamalar.py
+Exec=/usr/bin/python3 @TIZIM@/sozlamalar.py
 Icon=yangi-klaviatura
 Terminal=false
 Categories=GTK;Settings;

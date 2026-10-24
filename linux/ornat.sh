@@ -8,14 +8,18 @@ cd "$(dirname "$0")"
 TIZIM=/usr/local/share/yangi-klaviatura
 ILOVA=io.github.adkhamjon1.YangiKlaviatura
 KOMPONENT=/usr/share/ibus/component/ozbek.xml
+VERSIYA=$(grep -oP "^VERSIYA = '\K[^']+" ibus/sozlamalar.py)
+shablon() { sed -e "s#@TIZIM@#$TIZIM#g" -e "s#@VERSIYA@#$VERSIYA#g" "$1"; }
 FAYLLAR=(ogirgich.py sozlama.py xarita.py lugat.txt foydalanuvchi.py engine.py sozlamalar.py)
 
 if [ "${1:-}" = --tizim ]; then              # root sifatida: dvigatel, oyna, ikonka
   install -d "$TIZIM"
   for f in "${FAYLLAR[@]}"; do install -m 644 "ibus/$f" "$TIZIM/$f"; done
   chmod 755 "$TIZIM/engine.py" "$TIZIM/sozlamalar.py"
-  install -Dm 644 ibus/ozbek.xml "$KOMPONENT"
-  install -Dm 644 ibus/ilova.desktop "/usr/local/share/applications/$ILOVA.desktop"
+  install -d "$(dirname "$KOMPONENT")" /usr/local/share/applications
+  shablon ibus/ozbek.xml > "$KOMPONENT"
+  shablon ibus/ilova.desktop > "/usr/local/share/applications/$ILOVA.desktop"
+  chmod 644 "$KOMPONENT" "/usr/local/share/applications/$ILOVA.desktop"
   install -Dm 644 ibus/yangi-klaviatura.svg /usr/local/share/icons/hicolor/scalable/apps/yangi-klaviatura.svg
   gtk-update-icon-cache -qtf /usr/local/share/icons/hicolor 2>/dev/null || true
   exit 0
@@ -42,7 +46,7 @@ fi
 # 2. IBus dvigateli va sozlamalar oynasi — tizimga (fayllar o'zgargan bo'lsagina sudo so'raladi)
 yangilash=0
 for f in "${FAYLLAR[@]}"; do cmp -s "ibus/$f" "$TIZIM/$f" || yangilash=1; done
-cmp -s ibus/ozbek.xml "$KOMPONENT" || yangilash=1
+shablon ibus/ozbek.xml | cmp -s - "$KOMPONENT" || yangilash=1
 if [ $yangilash = 1 ]; then
   sudo bash "$PWD/ornat.sh" --tizim
   ibus write-cache >/dev/null 2>&1 || true
