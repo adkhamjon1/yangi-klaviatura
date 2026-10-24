@@ -78,9 +78,19 @@ function linuxRegistry() {
 
 // ---------- yozish / tekshirish ----------
 
+// IBus dvigateli uchun: yangi harf → tugmaning asl belgisi
+function ibusXarita() {
+  const juftlar = Object.values(XARITA).flatMap((b) => [[b[0], b[2]], [b[1], b[3]]]);
+  return `# qur.mjs yasagan — xarita.mjs ni o'zgartiring.
+# Yangi harf → tugmaning asl belgisi («Yangi harflar tugmalarda» o'chiq bo'lganda).
+TUGMA_ASLI = ${JSON.stringify(Object.fromEntries(juftlar), null, 4).replace(/\n}$/, ',\n}')}
+`;
+}
+
 const FAYLLAR = [
   [`linux/symbols/${LINUX_ID}`, linuxSymbols],
   ['linux/rules/evdev.xml', linuxRegistry],
+  ['linux/ibus/xarita.py', ibusXarita],
 ];
 
 let eskirgan = 0;

@@ -1,9 +1,9 @@
-// Özbek (yangi yozuv) — o'zbek lotin alifbosi (2026): Ö Ğ Ş Ç.
+// Özbek — o'zbek lotin alifbosi (2026): Ö Ğ Ş Ç.
 // Bu fayl qur.mjs yasagan, qo'lda tahrirlanmaydi — xarita.mjs ni o'zgartiring.
 default partial alphanumeric_keys
 xkb_symbols "basic" {
     include "us(basic)"
-    name[Group1] = "Özbek (yangi yozuv)";
+    name[Group1] = "Özbek";
 
     key <AD02> { type[Group1] = "FOUR_LEVEL_SEMIALPHABETIC", [ scedilla, Scedilla, w, W ] };
     key <AB03> { type[Group1] = "FOUR_LEVEL_SEMIALPHABETIC", [ ccedilla, Ccedilla, c, C ] };

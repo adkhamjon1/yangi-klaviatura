@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Özbek klaviaturasi
+Comment=Yangi o'zbek yozuvi klaviaturasi sozlamalari
+Exec=/usr/bin/python3 /usr/local/share/yangi-klaviatura/sozlamalar.py
+Icon=yangi-klaviatura
+Terminal=false
+Categories=GTK;Settings;
+Keywords=uzbek;ozbek;klaviatura;keyboard;alifbo;
+StartupNotify=true

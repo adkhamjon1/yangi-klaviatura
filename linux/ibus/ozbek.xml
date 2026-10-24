@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- yangi-klaviatura: IBus komponenti (/usr/share/ibus/component/ozbek.xml) -->
+<component>
+  <name>org.freedesktop.IBus.Ozbek</name>
+  <description>Özbek (yangi yozuv)</description>
+  <exec>/usr/bin/python3 /usr/local/share/yangi-klaviatura/engine.py --ibus</exec>
+  <version>0.1</version>
+  <author>adkhamjon1</author>
+  <license></license>
+  <homepage>https://github.com/adkhamjon1/yangi-klaviatura</homepage>
+  <textdomain></textdomain>
+  <engines>
+    <engine>
+      <name>ozbek-lotin</name>
+      <language>uz</language>
+      <license></license>
+      <author>adkhamjon1</author>
+      <icon>yangi-klaviatura</icon>
+      <layout>ozbek</layout>
+      <longname>Özbek</longname>
+      <description>Lotincha yoziladi: sh → ş, ch → ç, o' → ö, g' → ğ</description>
+      <rank>0</rank>
+      <symbol>öz</symbol>
+      <setup>/usr/bin/python3 /usr/local/share/yangi-klaviatura/sozlamalar.py</setup>
+    </engine>
+    <engine>
+      <name>ozbek-kirill</name>
+      <language>uz</language>
+      <license></license>
+      <author>adkhamjon1</author>
+      <icon>yangi-klaviatura</icon>
+      <layout>uz</layout>
+      <longname>Ўзбек</longname>
+      <description>Kirillcha yoziladi, matn yangi lotinda chiqadi</description>
+      <rank>0</rank>
+      <symbol>ўз</symbol>
+      <setup>/usr/bin/python3 /usr/local/share/yangi-klaviatura/sozlamalar.py</setup>
+    </engine>
+  </engines>
+</component>

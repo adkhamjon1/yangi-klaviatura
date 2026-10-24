@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="yuz" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4a8df0"/>
+      <stop offset="1" stop-color="#2a62c9"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="16" width="108" height="102" rx="26" fill="#173f86"/>
+  <rect x="10" y="10" width="108" height="100" rx="26" fill="url(#yuz)"/>
+  <rect x="10.5" y="10.5" width="107" height="99" rx="25.5" fill="none" stroke="#ffffff" stroke-opacity="0.18"/>
+  <text x="64" y="86" text-anchor="middle" font-family="Cantarell, Inter, sans-serif" font-size="66" font-weight="800" fill="#ffffff">Ö</text>
+</svg>

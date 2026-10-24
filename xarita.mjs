@@ -6,8 +6,8 @@
 //
 // Xaritani o'zgartirgach: node qur.mjs
 
-export const NOM = 'Özbek (yangi yozuv)';
-export const QISQA = 'ÖZ';
+export const NOM = 'Özbek';
+export const QISQA = 'öz';      // panel belgisi: Linux'da «en» kabi kichik harf
 export const LINUX_ID = 'ozbek';   // XKB sxema nomi (faqat ASCII)
 
 // Tugma nomi — XKB bo'yicha (AD02 = W, AB03 = C, AD11 = [, AD12 = ]).

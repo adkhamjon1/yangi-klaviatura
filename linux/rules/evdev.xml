@@ -6,8 +6,8 @@
     <layout>
       <configItem>
         <name>ozbek</name>
-        <shortDescription>ÖZ</shortDescription>
-        <description>Özbek (yangi yozuv)</description>
+        <shortDescription>öz</shortDescription>
+        <description>Özbek</description>
         <countryList>
           <iso3166Id>UZ</iso3166Id>
         </countryList>
